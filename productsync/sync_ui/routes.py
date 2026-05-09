@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, redirect, render_template, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import func
 
@@ -11,6 +11,9 @@ bp = Blueprint("sync_ui", __name__)
 @bp.route("/dashboard")
 @login_required
 def dashboard():
+    # Distributors don't manage stores — bounce them to their own dashboard.
+    if current_user.account.is_distributor:
+        return redirect(url_for("distributor.dashboard"))
     aid = current_user.account_id
     counts = {
         "total": Product.query.filter_by(account_id=aid).count(),

@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}Distributor dashboard — ProductSync{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <span class="inline-flex items-center px-2.5 py-1 mb-2 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-full">
+    <span class="w-1.5 h-1.5 bg-amber-600 rounded-full mr-1.5"></span>
+    Distributor account
+  </span>
+  <h1 class="text-2xl font-bold text-gray-900">Welcome, {{ current_user.name.split()[0] }}.</h1>
+  <p class="text-sm text-gray-500 mt-1">
+    You're signed up as a distributor on <strong>{{ account.name }}</strong>.
+    Catalogue publishing is being built — you're in line for early access.
+  </p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Coming-soon catalogue card -->
+  <div class="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M21 7L12 3 3 7m18 0v10l-9 4-9-4V7m18 0l-9 4m0 0L3 7m9 4v10"/></svg>
+      </div>
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold text-gray-900">Publish your catalogue — coming soon</h2>
+        <p class="text-sm text-gray-600 mt-1">
+          Upload your full product line once. Subscribed e-commerce stores
+          pull from your catalogue automatically — no more emailed Excel files,
+          no more manual re-entry.
+        </p>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Bulk CSV / Excel upload</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Variants + EANs / GTINs</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Image hosting + alt text</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Pricing tiers per store</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Update once → all stores see it</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Per-store stock visibility</span>
+          </div>
+        </div>
+        <div class="mt-5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+          <p class="font-medium text-amber-900">You'll be the first to know.</p>
+          <p class="text-amber-800 text-xs mt-0.5">
+            We'll email <strong>{{ current_user.email }}</strong> when catalogue
+            publishing opens for distributor accounts.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account profile card -->
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Distributor profile</h2>
+    <dl class="space-y-3 text-sm">
+      <div>
+        <dt class="text-xs text-gray-500 uppercase tracking-wide">Company</dt>
+        <dd class="text-gray-900 font-medium">{{ account.name }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs text-gray-500 uppercase tracking-wide">Contact</dt>
+        <dd class="text-gray-900">{{ current_user.name }}</dd>
+        <dd class="text-gray-500 text-xs">{{ current_user.email }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs text-gray-500 uppercase tracking-wide">Member since</dt>
+        <dd class="text-gray-900">{{ account.created_at.strftime('%Y-%m-%d') }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs text-gray-500 uppercase tracking-wide">Status</dt>
+        <dd>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+            Beta — early access
+          </span>
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Roadmap -->
+  <div class="lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="px-5 py-3 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">What we're building for distributors</h2>
+    </div>
+    <ol class="divide-y divide-gray-100">
+      <li class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-3">
+          <span class="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold">1</span>
+          <div>
+            <p class="text-sm font-medium text-gray-900">Catalogue uploader</p>
+            <p class="text-xs text-gray-500">Bulk upload products + variants + images via CSV/Excel.</p>
+          </div>
+        </div>
+        <span class="text-xs text-gray-500">In progress</span>
+      </li>
+      <li class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-3">
+          <span class="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-semibold">2</span>
+          <div>
+            <p class="text-sm font-medium text-gray-900">Store discovery</p>
+            <p class="text-xs text-gray-500">Stores can browse the catalogue and request access to your products.</p>
+          </div>
+        </div>
+        <span class="text-xs text-gray-400">Planned</span>
+      </li>
+      <li class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-3">
+          <span class="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-semibold">3</span>
+          <div>
+            <p class="text-sm font-medium text-gray-900">Pricing tiers + per-store agreements</p>
+            <p class="text-xs text-gray-500">Different prices for different stores. Hide products from specific buyers.</p>
+          </div>
+        </div>
+        <span class="text-xs text-gray-400">Planned</span>
+      </li>
+      <li class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-3">
+          <span class="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-semibold">4</span>
+          <div>
+            <p class="text-sm font-medium text-gray-900">Reverse stock visibility</p>
+            <p class="text-xs text-gray-500">See which stores carry your products and aggregate sell-through data.</p>
+          </div>
+        </div>
+        <span class="text-xs text-gray-400">Planned</span>
+      </li>
+    </ol>
+  </div>
+
+</div>
+{% endblock %}

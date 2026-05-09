@@ -22,6 +22,14 @@ from .config import Config
 from .extensions import db, login_manager, migrate
 
 
+def _dashboard_url_for(user):
+    """Return the right post-login dashboard URL for a user based on their
+    account type. Used by the root route, login redirect, and templates."""
+    if user.account and user.account.is_distributor:
+        return url_for("distributor.dashboard")
+    return url_for("sync_ui.dashboard")
+
+
 def create_app(config: type[Config] | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_object(config or Config)
@@ -41,6 +49,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
     from .auth.routes import bp as auth_bp
     from .catalogue.routes import bp as catalogue_bp
     from .addons_ui.routes import bp as addons_ui_bp
+    from .distributor.routes import bp as distributor_bp
     from .orders_ui.routes import bp as orders_ui_bp
     from .sync_ui.routes import bp as sync_ui_bp
     from .webhooks.routes import bp as webhooks_bp
@@ -48,6 +57,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
     app.register_blueprint(auth_bp)
     app.register_blueprint(catalogue_bp)
     app.register_blueprint(addons_ui_bp)
+    app.register_blueprint(distributor_bp)
     app.register_blueprint(orders_ui_bp)
     app.register_blueprint(sync_ui_bp)
     app.register_blueprint(webhooks_bp)
@@ -55,8 +65,12 @@ def create_app(config: type[Config] | None = None) -> Flask:
     @app.route("/")
     def root():
         if current_user.is_authenticated:
-            return redirect(url_for("sync_ui.dashboard"))
+            return redirect(_dashboard_url_for(current_user))
         return render_template("marketing/landing.html")
+
+    # Expose the helper to templates so links (logo, "Open dashboard" buttons)
+    # can route per account_type without if/else everywhere.
+    app.jinja_env.globals["dashboard_url_for"] = _dashboard_url_for
 
     # ── Jinja: relative-time filter ────────────────────────────────────────
     @app.template_filter("naturaltime")

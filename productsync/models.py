@@ -17,13 +17,21 @@ PRODUCT_STATUSES = ["draft", "active", "archived"]
 CHANNEL_KINDS = ["woocommerce", "shopify"]
 SYNC_JOB_KINDS = ["push_product", "push_inventory", "pull_inventory", "webhook"]
 SYNC_JOB_STATUSES = ["queued", "running", "succeeded", "failed"]
+ACCOUNT_TYPES = ["store", "distributor"]
 
 
 class Account(db.Model):
     __tablename__ = "account"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
+    # 'store'       — connects to WC/Shopify, manages products, syncs to channels (default)
+    # 'distributor' — publishes catalogues that subscribed stores pull from
+    account_type = db.Column(db.String(20), nullable=False, default="store")
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    @property
+    def is_distributor(self) -> bool:
+        return self.account_type == "distributor"
 
 
 class User(UserMixin, db.Model):
@@ -34,6 +42,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(160), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    account = db.relationship("Account", lazy="joined")
 
 
 class Product(db.Model):

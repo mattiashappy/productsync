@@ -14,23 +14,41 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
+    from .. import _dashboard_url_for  # avoid circular import at module load
     if current_user.is_authenticated:
-        return redirect(url_for("sync_ui.dashboard"))
+        return redirect(_dashboard_url_for(current_user))
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
-            return redirect(url_for("sync_ui.dashboard"))
+            return redirect(_dashboard_url_for(user))
         flash("Invalid email or password.", "error")
     return render_template("auth/login.html")
 
 
 @bp.route("/signup", methods=["GET", "POST"])
 def signup():
+    return _signup_handler(account_type="store",
+                           template="auth/signup.html",
+                           welcome_redirect_endpoint="sync_ui.dashboard")
+
+
+@bp.route("/signup/distributor", methods=["GET", "POST"])
+def signup_distributor():
+    return _signup_handler(account_type="distributor",
+                           template="auth/signup_distributor.html",
+                           welcome_redirect_endpoint="distributor.dashboard")
+
+
+def _signup_handler(*, account_type: str, template: str, welcome_redirect_endpoint: str):
+    """Shared signup logic for both store and distributor flows.
+    The only differences between the two are the account_type written to the
+    DB, the rendered template, and where the user lands after signing up.
+    """
     if current_user.is_authenticated:
-        return redirect(url_for("sync_ui.dashboard"))
+        return redirect(url_for(welcome_redirect_endpoint))
 
     form = {
         "name": request.form.get("name", "").strip(),
@@ -60,9 +78,15 @@ def signup():
         if errors:
             for e in errors:
                 flash(e, "error")
-            return render_template("auth/signup.html", form=form)
+            return render_template(template, form=form)
 
-        account = Account(name=form["company"] or f"{form['name']}'s workspace")
+        # Distributors get the company name front-and-centre; stores can leave it blank.
+        account_name = (
+            form["company"]
+            or (form["name"] + ("'s catalogue" if account_type == "distributor"
+                                 else "'s workspace"))
+        )
+        account = Account(name=account_name, account_type=account_type)
         db.session.add(account)
         db.session.flush()
         user = User(
@@ -75,10 +99,14 @@ def signup():
         db.session.commit()
 
         login_user(user)
-        flash(f"Welcome to ProductSync, {user.name.split()[0]}!", "info")
-        return redirect(url_for("sync_ui.dashboard"))
+        if account_type == "distributor":
+            flash(f"Welcome to ProductSync, {user.name.split()[0]}! "
+                  f"You're set up as a distributor. Catalogue publishing is coming soon.", "info")
+        else:
+            flash(f"Welcome to ProductSync, {user.name.split()[0]}!", "info")
+        return redirect(url_for(welcome_redirect_endpoint))
 
-    return render_template("auth/signup.html", form=form)
+    return render_template(template, form=form)
 
 
 @bp.route("/logout")

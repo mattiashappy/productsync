@@ -211,6 +211,85 @@
   </div>
 </section>
 
+<!-- Choose your role -->
+<section id="for-you" class="bg-white border-t border-gray-100">
+  <div class="max-w-screen-xl px-4 py-16 mx-auto lg:px-6">
+    <div class="max-w-screen-md mb-10">
+      <h2 class="text-3xl font-bold tracking-tight text-gray-900">Two sides of the same network.</h2>
+      <p class="mt-3 text-gray-600">
+        Pick the path that fits — distributors publish, stores consume. Same database in the middle.
+      </p>
+    </div>
+    <div class="grid gap-6 md:grid-cols-2">
+
+      <!-- Distributor card -->
+      <div class="bg-white border-2 border-amber-200 rounded-xl shadow-sm p-6 flex flex-col">
+        <span class="inline-flex items-center self-start px-2.5 py-0.5 mb-4 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-full">
+          For brands &amp; distributors
+        </span>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">Publish your catalogue once.</h3>
+        <p class="text-sm text-gray-600 mb-5 flex-1">
+          Upload your full product line — variants, EANs, images, prices — and let subscribed
+          stores pull from it automatically. Update one record, every store sees the new version.
+        </p>
+        <ul class="space-y-2 mb-6 text-sm">
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">No more emailed Excel files</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Reach every connected store at once</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Per-store pricing tiers (planned)</span>
+          </li>
+        </ul>
+        <a href="{{ url_for('auth.signup_distributor') }}"
+           class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 rounded-lg">
+          Claim early access
+          <svg class="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1 0 1.414l-6 6a1 1 0 0 1-1.414-1.414L14.586 11H3a1 1 0 1 1 0-2h11.586l-4.293-4.293a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"/></svg>
+        </a>
+        <p class="mt-3 text-xs text-gray-500">Beta — uploader opening soon.</p>
+      </div>
+
+      <!-- Store card -->
+      <div class="bg-white border-2 border-emerald-200 rounded-xl shadow-sm p-6 flex flex-col">
+        <span class="inline-flex items-center self-start px-2.5 py-0.5 mb-4 text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-full">
+          For e-commerce stores
+        </span>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">Stop maintaining product data three times.</h3>
+        <p class="text-sm text-gray-600 mb-5 flex-1">
+          Connect WooCommerce or Shopify, import your catalogue in one click, and ProductSync
+          pushes every future edit out automatically. Pull from distributor catalogues when
+          you're ready.
+        </p>
+        <ul class="space-y-2 mb-6 text-sm">
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">WooCommerce + Shopify live today</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">One-click import of existing products</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">Two-way sync done right (orders are sacred)</span>
+          </li>
+        </ul>
+        <a href="{{ url_for('auth.signup') }}"
+           class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 rounded-lg">
+          Get started free
+          <svg class="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1 0 1.414l-6 6a1 1 0 0 1-1.414-1.414L14.586 11H3a1 1 0 1 1 0-2h11.586l-4.293-4.293a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"/></svg>
+        </a>
+        <p class="mt-3 text-xs text-gray-500">Free during beta. No credit card.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Features -->
 <section class="bg-gray-50 border-y border-gray-100">
   <div class="max-w-screen-xl px-4 py-16 mx-auto lg:px-6">
