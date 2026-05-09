@@ -20,9 +20,9 @@
       </h1>
       <p class="max-w-2xl mx-auto mb-6 font-light text-gray-600 md:text-lg lg:text-xl">
         ProductSync is the layer between brands and online stores.
-        Distributors publish their catalogue once;
-        e-commerce stores pull straight from the shared database.
-        No more emailed Excel files. No more manually re-entering products.
+        Distributors manage their full product line in one place; every connected
+        store stays in sync automatically. New SKU, price change, swapped image —
+        every retailer that carries you sees it the moment you save it.
       </p>
       <div class="flex flex-col sm:flex-row justify-center gap-3">
         <a href="{{ url_for('auth.signup') }}"
@@ -227,23 +227,28 @@
         <span class="inline-flex items-center self-start px-2.5 py-0.5 mb-4 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-full">
           For brands &amp; distributors
         </span>
-        <h3 class="text-xl font-bold text-gray-900 mb-2">Publish your catalogue once.</h3>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">Your product line, always live.</h3>
         <p class="text-sm text-gray-600 mb-5 flex-1">
-          Upload your full product line — variants, EANs, images, prices — and let subscribed
-          stores pull from it automatically. Update one record, every store sees the new version.
+          Manage your whole product line in one place — variants, EANs, images, prices.
+          As your range evolves, every connected store stays current automatically.
+          End the cycle of "send me your latest Excel."
         </p>
         <ul class="space-y-2 mb-6 text-sm">
           <li class="flex items-start gap-2">
             <svg class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
-            <span class="text-gray-700">No more emailed Excel files</span>
+            <span class="text-gray-700">Add a new SKU → connected stores see it instantly</span>
           </li>
           <li class="flex items-start gap-2">
             <svg class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
-            <span class="text-gray-700">Reach every connected store at once</span>
+            <span class="text-gray-700">Edit a price or image once, propagates everywhere</span>
           </li>
           <li class="flex items-start gap-2">
             <svg class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
-            <span class="text-gray-700">Per-store pricing tiers (planned)</span>
+            <span class="text-gray-700">Discontinue a product → instantly hidden in retailer catalogues</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+            <span class="text-gray-700">No more emailed Excel files. Ever.</span>
           </li>
         </ul>
         <a href="{{ url_for('auth.signup_distributor') }}"
