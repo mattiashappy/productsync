@@ -26,8 +26,10 @@ def upgrade():
             nullable=False, server_default='0',
         ))
     # Backfill: the seeded admin is the first platform admin. Quoted "user"
-    # because it's a reserved word in Postgres. Same syntax works on SQLite.
-    op.execute('UPDATE "user" SET is_admin = 1 WHERE email = \'admin@example.com\'')
+    # because it's a reserved word in Postgres. Use TRUE (not 1) — Postgres
+    # rejects integer-to-boolean implicit casts in UPDATE; modern SQLite
+    # (>=3.23, 2018) also accepts TRUE so the migration stays portable.
+    op.execute("UPDATE \"user\" SET is_admin = TRUE WHERE email = 'admin@example.com'")
 
 
 def downgrade():
