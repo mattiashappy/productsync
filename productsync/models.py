@@ -27,6 +27,19 @@ class Account(db.Model):
     # 'store'       — connects to WC/Shopify, manages products, syncs to channels (default)
     # 'distributor' — publishes catalogues that subscribed stores pull from
     account_type = db.Column(db.String(20), nullable=False, default="store")
+
+    # Profile fields collected during signup. All optional — kept on Account
+    # rather than User because they describe the business, not the person.
+    industry = db.Column(db.String(80))            # what they sell or distribute
+    website = db.Column(db.String(255))            # store URL (store) or brand site (distributor)
+    country = db.Column(db.String(80))             # free-text country / region
+    # Store-only — comma-separated list of platform slugs the user already runs
+    # ("woocommerce", "shopify", "both", "none"). Used later to tailor onboarding.
+    current_platforms = db.Column(db.String(120))
+    # Distributor-only — rough range string ("1-10", "11-50", ...). Helps decide
+    # whether to push catalogue imports to a background worker from day one.
+    product_count_estimate = db.Column(db.String(20))
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     @property

@@ -1,16 +1,26 @@
 {% extends 'marketing/_shell.html' %}
-{% block title %}Create your account — ProductSync{% endblock %}
+{% block title %}Sign up — ProductSync{% endblock %}
 {% block content %}
 <section class="bg-gray-50">
   <div class="flex flex-col items-center justify-center px-4 py-10 mx-auto md:py-16">
     <div class="w-full bg-white rounded-lg shadow border border-gray-200 sm:max-w-md">
       <div class="p-6 space-y-5 sm:p-8">
-        <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
-          Create your free account
-        </h1>
-        <p class="text-sm text-gray-500">No credit card. Free during beta.</p>
+        <div>
+          <span class="inline-flex items-center px-2.5 py-1 mb-3 text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-full">
+            <span class="w-1.5 h-1.5 bg-emerald-600 rounded-full mr-1.5"></span>
+            For e-commerce stores
+          </span>
+          <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
+            Create your free account
+          </h1>
+          <p class="text-sm text-gray-500 mt-2">
+            Connect your storefronts and let ProductSync keep your product data in sync.
+          </p>
+        </div>
 
         <form method="POST" class="space-y-4">
+
+          <!-- Identity -->
           <div>
             <label for="name" class="block mb-1.5 text-sm font-medium text-gray-900">Your name</label>
             <input type="text" name="name" id="name" required value="{{ form.name }}"
@@ -20,31 +30,78 @@
           <div>
             <label for="email" class="block mb-1.5 text-sm font-medium text-gray-900">Work email</label>
             <input type="email" name="email" id="email" required value="{{ form.email }}"
-                   placeholder="name@company.com"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
-          </div>
-          <div>
-            <label for="company" class="block mb-1.5 text-sm font-medium text-gray-900">
-              Company / workspace name <span class="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <input type="text" name="company" id="company" value="{{ form.company }}"
-                   placeholder="Happy Digital AB"
+                   placeholder="name@yourstore.com"
                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
           </div>
           <div>
             <label for="password" class="block mb-1.5 text-sm font-medium text-gray-900">Password</label>
-            <input type="password" name="password" id="password" required minlength="8"
-                   placeholder="••••••••"
+            <input type="password" name="password" id="password" required minlength="8" placeholder="••••••••"
                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
             <p class="mt-1 text-xs text-gray-500">At least 8 characters.</p>
           </div>
           <div>
             <label for="password_confirm" class="block mb-1.5 text-sm font-medium text-gray-900">Confirm password</label>
-            <input type="password" name="password_confirm" id="password_confirm" required minlength="8"
-                   placeholder="••••••••"
+            <input type="password" name="password_confirm" id="password_confirm" required minlength="8" placeholder="••••••••"
                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
           </div>
-          <div class="flex items-start">
+
+          <!-- Store-specific section -->
+          <div class="pt-3 border-t border-gray-100 space-y-4">
+            <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">About your store</p>
+
+            <div>
+              <label for="company" class="block mb-1.5 text-sm font-medium text-gray-900">
+                Store / company name <span class="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input type="text" name="company" id="company" value="{{ form.company }}"
+                     placeholder="Mattias Mugs AB"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+
+            <div>
+              <label for="current_platforms" class="block mb-1.5 text-sm font-medium text-gray-900">
+                Where do you currently sell? <span class="text-gray-400 font-normal">(optional — helps us tailor your onboarding)</span>
+              </label>
+              <select name="current_platforms" id="current_platforms"
+                      class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
+                <option value="" {% if not form.current_platforms %}selected{% endif %}>— Choose one —</option>
+                <option value="woocommerce" {% if form.current_platforms == 'woocommerce' %}selected{% endif %}>WooCommerce</option>
+                <option value="shopify" {% if form.current_platforms == 'shopify' %}selected{% endif %}>Shopify</option>
+                <option value="both" {% if form.current_platforms == 'both' %}selected{% endif %}>Both WooCommerce + Shopify</option>
+                <option value="other" {% if form.current_platforms == 'other' %}selected{% endif %}>Other platform</option>
+                <option value="none" {% if form.current_platforms == 'none' %}selected{% endif %}>Not selling online yet</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="website" class="block mb-1.5 text-sm font-medium text-gray-900">
+                Store URL <span class="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input type="text" name="website" id="website" value="{{ form.website }}"
+                     placeholder="yourstore.com"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+
+            <div>
+              <label for="industry" class="block mb-1.5 text-sm font-medium text-gray-900">
+                What do you sell? <span class="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input type="text" name="industry" id="industry" value="{{ form.industry }}"
+                     placeholder="e.g. luggage, fashion, electronics, home & garden"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+
+            <div>
+              <label for="country" class="block mb-1.5 text-sm font-medium text-gray-900">
+                Country <span class="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input type="text" name="country" id="country" value="{{ form.country }}"
+                     placeholder="Sweden"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+          </div>
+
+          <div class="flex items-start pt-1">
             <div class="flex items-center h-5">
               <input id="terms" name="terms" type="checkbox" required
                      class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300" />
@@ -56,12 +113,20 @@
           </div>
           <button type="submit"
                   class="w-full text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-            Create account
+            Create store account
           </button>
-          <p class="text-sm font-light text-gray-500">
-            Already have an account?
-            <a href="{{ url_for('auth.login') }}" class="font-medium text-primary-700 hover:underline">Sign in</a>
-          </p>
+          <div class="text-sm font-light text-gray-500 space-y-1.5">
+            <p>
+              Are you a brand or distributor instead?
+              <a href="{{ url_for('auth.signup_distributor') }}" class="font-medium text-primary-700 hover:underline">
+                Sign up as a distributor
+              </a>
+            </p>
+            <p>
+              Already have an account?
+              <a href="{{ url_for('auth.login') }}" class="font-medium text-primary-700 hover:underline">Sign in</a>
+            </p>
+          </div>
         </form>
       </div>
     </div>

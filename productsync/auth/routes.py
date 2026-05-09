@@ -43,17 +43,29 @@ def signup_distributor():
 
 
 def _signup_handler(*, account_type: str, template: str, welcome_redirect_endpoint: str):
-    """Shared signup logic for both store and distributor flows.
-    The only differences between the two are the account_type written to the
-    DB, the rendered template, and where the user lands after signing up.
+    """Shared signup core for both store and distributor flows.
+    What differs by type:
+      - which form fields are accepted (and which are required)
+      - the rendered template
+      - the post-signup destination + welcome flash
     """
     if current_user.is_authenticated:
         return redirect(url_for(welcome_redirect_endpoint))
 
+    is_distributor = account_type == "distributor"
+
+    # Common fields
     form = {
         "name": request.form.get("name", "").strip(),
         "email": request.form.get("email", "").strip().lower(),
         "company": request.form.get("company", "").strip(),
+        "industry": request.form.get("industry", "").strip(),
+        "website": request.form.get("website", "").strip(),
+        "country": request.form.get("country", "").strip(),
+        # Store-only
+        "current_platforms": request.form.get("current_platforms", "").strip(),
+        # Distributor-only
+        "product_count_estimate": request.form.get("product_count_estimate", "").strip(),
     }
 
     if request.method == "POST":
@@ -72,6 +84,10 @@ def _signup_handler(*, account_type: str, template: str, welcome_redirect_endpoi
             errors.append("Passwords don't match.")
         if not terms:
             errors.append("Please accept the terms to continue.")
+        # Distributors MUST give a brand name — it's their public identity to
+        # subscribed stores. Stores can leave the company blank (we'll generate one).
+        if is_distributor and not form["company"]:
+            errors.append("Please enter your brand or company name — stores will see this.")
         if not errors and User.query.filter_by(email=form["email"]).first():
             errors.append("An account with this email already exists. Try signing in instead.")
 
@@ -80,13 +96,20 @@ def _signup_handler(*, account_type: str, template: str, welcome_redirect_endpoi
                 flash(e, "error")
             return render_template(template, form=form)
 
-        # Distributors get the company name front-and-centre; stores can leave it blank.
         account_name = (
             form["company"]
-            or (form["name"] + ("'s catalogue" if account_type == "distributor"
-                                 else "'s workspace"))
+            or (form["name"] + ("'s catalogue" if is_distributor else "'s workspace"))
         )
-        account = Account(name=account_name, account_type=account_type)
+        account = Account(
+            name=account_name,
+            account_type=account_type,
+            industry=form["industry"] or None,
+            website=_normalize_url(form["website"]),
+            country=form["country"] or None,
+            # Type-specific: only persist the field that applies
+            current_platforms=form["current_platforms"] or None if not is_distributor else None,
+            product_count_estimate=form["product_count_estimate"] or None if is_distributor else None,
+        )
         db.session.add(account)
         db.session.flush()
         user = User(
@@ -99,14 +122,25 @@ def _signup_handler(*, account_type: str, template: str, welcome_redirect_endpoi
         db.session.commit()
 
         login_user(user)
-        if account_type == "distributor":
+        if is_distributor:
             flash(f"Welcome to ProductSync, {user.name.split()[0]}! "
-                  f"You're set up as a distributor. Catalogue publishing is coming soon.", "info")
+                  f"You're set up as a distributor — your brand profile is live. "
+                  f"The catalogue workspace is coming soon.", "info")
         else:
             flash(f"Welcome to ProductSync, {user.name.split()[0]}!", "info")
         return redirect(url_for(welcome_redirect_endpoint))
 
     return render_template(template, form=form)
+
+
+def _normalize_url(value: str) -> str | None:
+    """Make sure a website URL has a scheme so links work later."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    if not (value.startswith("http://") or value.startswith("https://")):
+        return "https://" + value
+    return value
 
 
 @bp.route("/logout")

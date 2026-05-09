@@ -22,20 +22,13 @@
         </div>
 
         <form method="POST" class="space-y-4">
+
+          <!-- Identity -->
           <div>
             <label for="name" class="block mb-1.5 text-sm font-medium text-gray-900">Your name</label>
             <input type="text" name="name" id="name" required value="{{ form.name }}"
                    placeholder="Mattias Olsson"
                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
-          </div>
-          <div>
-            <label for="company" class="block mb-1.5 text-sm font-medium text-gray-900">
-              Company / brand name
-            </label>
-            <input type="text" name="company" id="company" required value="{{ form.company }}"
-                   placeholder="Samsonite Sweden AB"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
-            <p class="mt-1 text-xs text-gray-500">This is what stores will see when browsing distributors.</p>
           </div>
           <div>
             <label for="email" class="block mb-1.5 text-sm font-medium text-gray-900">Work email</label>
@@ -45,18 +38,89 @@
           </div>
           <div>
             <label for="password" class="block mb-1.5 text-sm font-medium text-gray-900">Password</label>
-            <input type="password" name="password" id="password" required minlength="8"
-                   placeholder="••••••••"
+            <input type="password" name="password" id="password" required minlength="8" placeholder="••••••••"
                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
             <p class="mt-1 text-xs text-gray-500">At least 8 characters.</p>
           </div>
           <div>
             <label for="password_confirm" class="block mb-1.5 text-sm font-medium text-gray-900">Confirm password</label>
-            <input type="password" name="password_confirm" id="password_confirm" required minlength="8"
-                   placeholder="••••••••"
+            <input type="password" name="password_confirm" id="password_confirm" required minlength="8" placeholder="••••••••"
                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
           </div>
-          <div class="flex items-start">
+
+          <!-- Distributor-specific section -->
+          <div class="pt-3 border-t border-gray-100 space-y-4">
+            <div>
+              <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Your brand</p>
+              <p class="text-xs text-gray-500 mt-0.5">This is the public face of your distributor account. Subscribed stores will see this.</p>
+            </div>
+
+            <div>
+              <label for="company" class="block mb-1.5 text-sm font-medium text-gray-900">
+                Brand or company name <span class="text-red-500">*</span>
+              </label>
+              <input type="text" name="company" id="company" required value="{{ form.company }}"
+                     placeholder="Samsonite Sweden AB"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+
+            <div>
+              <label for="website" class="block mb-1.5 text-sm font-medium text-gray-900">
+                Brand website <span class="text-amber-700 font-normal">(recommended)</span>
+              </label>
+              <input type="text" name="website" id="website" value="{{ form.website }}"
+                     placeholder="samsonite.se"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+              <p class="mt-1 text-xs text-gray-500">Helps stores verify your brand when they consider subscribing.</p>
+            </div>
+
+            <div>
+              <label for="industry" class="block mb-1.5 text-sm font-medium text-gray-900">
+                What do you distribute? <span class="text-amber-700 font-normal">(recommended)</span>
+              </label>
+              <select name="industry" id="industry"
+                      class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
+                <option value="" {% if not form.industry %}selected{% endif %}>— Choose a category —</option>
+                <option value="luggage" {% if form.industry == 'luggage' %}selected{% endif %}>Luggage &amp; travel</option>
+                <option value="fashion" {% if form.industry == 'fashion' %}selected{% endif %}>Fashion &amp; apparel</option>
+                <option value="electronics" {% if form.industry == 'electronics' %}selected{% endif %}>Electronics &amp; gadgets</option>
+                <option value="home" {% if form.industry == 'home' %}selected{% endif %}>Home &amp; garden</option>
+                <option value="beauty" {% if form.industry == 'beauty' %}selected{% endif %}>Beauty &amp; personal care</option>
+                <option value="sports" {% if form.industry == 'sports' %}selected{% endif %}>Sports &amp; outdoors</option>
+                <option value="food" {% if form.industry == 'food' %}selected{% endif %}>Food &amp; beverage</option>
+                <option value="toys" {% if form.industry == 'toys' %}selected{% endif %}>Toys &amp; games</option>
+                <option value="other" {% if form.industry == 'other' %}selected{% endif %}>Other</option>
+              </select>
+              <p class="mt-1 text-xs text-gray-500">Helps the right stores find you in the catalogue marketplace.</p>
+            </div>
+
+            <div>
+              <label for="product_count_estimate" class="block mb-1.5 text-sm font-medium text-gray-900">
+                Roughly how many products do you sell? <span class="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <select name="product_count_estimate" id="product_count_estimate"
+                      class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
+                <option value="" {% if not form.product_count_estimate %}selected{% endif %}>— Choose a range —</option>
+                <option value="1-10" {% if form.product_count_estimate == '1-10' %}selected{% endif %}>1–10</option>
+                <option value="11-50" {% if form.product_count_estimate == '11-50' %}selected{% endif %}>11–50</option>
+                <option value="51-200" {% if form.product_count_estimate == '51-200' %}selected{% endif %}>51–200</option>
+                <option value="201-1000" {% if form.product_count_estimate == '201-1000' %}selected{% endif %}>201–1,000</option>
+                <option value="1000+" {% if form.product_count_estimate == '1000+' %}selected{% endif %}>1,000+</option>
+              </select>
+              <p class="mt-1 text-xs text-gray-500">We'll size your import experience appropriately.</p>
+            </div>
+
+            <div>
+              <label for="country" class="block mb-1.5 text-sm font-medium text-gray-900">
+                Country <span class="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input type="text" name="country" id="country" value="{{ form.country }}"
+                     placeholder="Sweden"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+          </div>
+
+          <div class="flex items-start pt-1">
             <div class="flex items-center h-5">
               <input id="terms" name="terms" type="checkbox" required
                      class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300" />
