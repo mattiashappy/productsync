@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — ProductSync{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+    <p class="text-sm text-gray-500 mt-1">Overview of your catalogue and connected channels.</p>
+  </div>
+  <a href="{{ url_for('catalogue.new') }}"
+     class="inline-flex items-center gap-2 text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5">
+    + New product
+  </a>
+</div>
+
+<!-- KPI tiles -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+    <div class="flex items-center justify-between">
+      <span class="text-xs text-gray-500 uppercase tracking-wide">Products</span>
+      <span class="text-gray-300">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10l8 4 8-4V7l-8-4-8 4Zm0 0 8 4m0 0 8-4m-8 4v10"/></svg>
+      </span>
+    </div>
+    <p class="text-3xl font-bold text-gray-900 mt-2">{{ counts.total }}</p>
+  </div>
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+    <div class="flex items-center justify-between">
+      <span class="text-xs text-gray-500 uppercase tracking-wide">Active</span>
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">live</span>
+    </div>
+    <p class="text-3xl font-bold text-green-600 mt-2">{{ counts.active }}</p>
+  </div>
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+    <div class="flex items-center justify-between">
+      <span class="text-xs text-gray-500 uppercase tracking-wide">Draft</span>
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">unpublished</span>
+    </div>
+    <p class="text-3xl font-bold text-gray-400 mt-2">{{ counts.draft }}</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <!-- Channels card -->
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">Connected channels</h2>
+      <a href="{{ url_for('addons_ui.index') }}" class="text-xs font-medium text-primary-600 hover:text-primary-800">Manage →</a>
+    </div>
+    {% if channels %}
+    <ul class="divide-y divide-gray-100">
+      {% for c in channels %}
+      <li class="flex items-center justify-between px-5 py-3">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-primary-50 text-primary-700 flex items-center justify-center text-xs font-semibold uppercase">
+            {{ c.channel[0] }}
+          </span>
+          <div>
+            <p class="text-sm font-medium text-gray-800">{{ c.display_name }}</p>
+            <p class="text-xs text-gray-400">{{ c.channel }}</p>
+          </div>
+        </div>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+          {% if c.status == 'active' %}bg-green-100 text-green-800
+          {% elif c.status == 'error' %}bg-red-100 text-red-800
+          {% else %}bg-gray-100 text-gray-600{% endif %}">{{ c.status }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="px-5 py-8 text-center">
+      <p class="text-sm text-gray-500 mb-3">No channels connected yet.</p>
+      <a href="{{ url_for('addons_ui.index') }}"
+         class="inline-flex items-center gap-2 text-primary-700 bg-primary-50 hover:bg-primary-100 font-medium rounded-lg text-sm px-3 py-2">
+        Connect a channel →
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Recent orders card -->
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">Recent orders</h2>
+      <a href="{{ url_for('orders_ui.index') }}" class="text-xs font-medium text-primary-600 hover:text-primary-800">All orders →</a>
+    </div>
+    {% if recent_orders %}
+    <ul class="divide-y divide-gray-100">
+      {% for o in recent_orders %}
+      <li class="flex items-center justify-between px-5 py-3">
+        <div>
+          <p class="text-sm font-medium text-gray-800 font-mono">{{ o.sku }}</p>
+          <p class="text-xs text-gray-500">×{{ o.quantity }} · {{ o.channel_account.display_name }}</p>
+        </div>
+        <span class="text-xs text-gray-400">{{ o.ordered_at.strftime('%Y-%m-%d %H:%M') }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-500 px-5 py-8 text-center">No orders received yet.</p>
+    {% endif %}
+  </div>
+
+  {% if out_of_stock %}
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm lg:col-span-2">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">Out of stock</h2>
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">{{ out_of_stock|length }}</span>
+    </div>
+    <ul class="divide-y divide-gray-100">
+      {% for p in out_of_stock %}
+      <li class="flex items-center justify-between px-5 py-3">
+        <a href="{{ url_for('catalogue.detail', product_id=p.id) }}" class="text-sm font-medium text-primary-700 hover:underline">{{ p.title }}</a>
+        <span class="text-xs text-gray-500 font-mono">{{ p.sku }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

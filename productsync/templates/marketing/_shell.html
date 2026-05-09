@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}ProductSync — One catalogue, every storefront{% endblock %}</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.css" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+          },
+          colors: {
+            primary: {
+              50:  '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a', 950: '#172554'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-white text-gray-900 antialiased">
+
+<header>
+  <nav class="bg-white border-gray-200 px-4 lg:px-6 py-3">
+    <div class="flex flex-wrap justify-between items-center mx-auto max-w-screen-xl">
+      <a href="{{ url_for('root') }}" class="flex items-center">
+        <span class="self-center text-xl font-bold whitespace-nowrap text-primary-700">ProductSync</span>
+      </a>
+      <div class="flex items-center lg:order-2 gap-2">
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('sync_ui.dashboard') }}"
+             class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 focus:outline-none">
+            Open dashboard
+          </a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}"
+             class="text-gray-800 hover:bg-gray-50 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 focus:outline-none">
+            Sign in
+          </a>
+          <a href="{{ url_for('auth.signup') }}"
+             class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 focus:outline-none">
+            Get started
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+</header>
+
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="max-w-screen-md mx-auto px-4 pt-4">
+        {% for category, msg in messages %}
+        <div id="flash-{{ loop.index }}" role="alert"
+             class="flex items-center p-3 mb-3 text-sm rounded-lg
+                    {% if category == 'error' %}bg-red-50 text-red-800 border border-red-200
+                    {% elif category == 'info' %}bg-primary-50 text-primary-800 border border-primary-200
+                    {% else %}bg-green-50 text-green-800 border border-green-200{% endif %}">
+          <svg class="shrink-0 w-4 h-4 me-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/></svg>
+          <span>{{ msg }}</span>
+          <button type="button" onclick="document.getElementById('flash-{{ loop.index }}').remove()"
+                  class="ms-auto text-current opacity-50 hover:opacity-100">×</button>
+        </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="bg-white border-t border-gray-200">
+  <div class="max-w-screen-xl mx-auto px-4 lg:px-6 py-8">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <span class="text-lg font-bold text-primary-700">ProductSync</span>
+        <p class="text-sm text-gray-500 mt-1">One catalogue, every storefront.</p>
+      </div>
+      <div class="flex items-center gap-6 text-sm text-gray-500">
+        <a href="{{ url_for('root') }}" class="hover:text-gray-900">Home</a>
+        <a href="{{ url_for('auth.login') }}" class="hover:text-gray-900">Sign in</a>
+        <a href="{{ url_for('auth.signup') }}" class="hover:text-gray-900">Sign up</a>
+      </div>
+    </div>
+    <p class="text-xs text-gray-400 mt-6">© ProductSync. Beta — built in the open.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% block title %}{{ addon.name }} — Addons — ProductSync{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="mb-6">
+  <a href="{{ url_for('addons_ui.index') }}" class="inline-flex items-center text-xs text-gray-500 hover:text-gray-900 mb-3">
+    <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 14 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5H1m0 0 4 4M1 5l4-4"/></svg>
+    All addons
+  </a>
+  <div class="flex items-start gap-4">
+    <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl font-bold {{ addon.color_bg }} {{ addon.color_text }}">
+      {{ addon.icon_letter }}
+    </div>
+    <div class="flex-1">
+      <h1 class="text-2xl font-bold text-gray-900">{{ addon.name }}</h1>
+      <p class="text-sm text-gray-500 mt-0.5">{{ addon.tagline }}</p>
+      {% if addon.docs_url %}
+        <a href="{{ addon.docs_url }}" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center mt-2 text-xs text-primary-700 hover:underline">
+          Documentation
+          <svg class="w-3 h-3 ml-1" fill="none" viewBox="0 0 14 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 9 9 5m0 0H5m4 0v4M3 3h8a2 2 0 0 1 2 2v8"/></svg>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if addon.status != 'available' %}
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+  This addon is on the roadmap but not connectable yet.
+</div>
+{% else %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Connected stores -->
+  <div class="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">Connected stores</h2>
+      <span class="text-xs text-gray-400">{{ stores|length }} connected</span>
+    </div>
+
+    {% if stores %}
+    <ul class="divide-y divide-gray-100">
+      {% for s in stores %}
+      <li class="px-5 py-4">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0 {{ addon.color_bg }} {{ addon.color_text }}">
+              {{ addon.icon_letter }}
+            </span>
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ s.display_name }}</p>
+              <p class="text-xs text-gray-500 truncate">{{ s.base_url }}</p>
+              {% if s.last_sync_at %}
+                <p class="text-xs text-gray-400 mt-0.5">Last sync {{ s.last_sync_at.strftime('%Y-%m-%d %H:%M') }}</p>
+              {% endif %}
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+              {% if s.status == 'active' %}bg-green-100 text-green-800
+              {% elif s.status == 'error' %}bg-red-100 text-red-800
+              {% else %}bg-gray-100 text-gray-600{% endif %}">{{ s.status }}</span>
+            <form method="POST" action="{{ url_for('addons_ui.toggle_store', store_id=s.id) }}">
+              <button class="text-xs text-gray-600 hover:text-gray-900 px-2 py-1">{{ 'Disable' if s.status == 'active' else 'Enable' }}</button>
+            </form>
+            <form method="POST" action="{{ url_for('addons_ui.delete_store', store_id=s.id) }}"
+                  onsubmit="return confirm('Remove this store? This deletes all link mappings to it.');">
+              <button class="text-xs text-red-500 hover:text-red-700 px-2 py-1">Remove</button>
+            </form>
+          </div>
+        </div>
+
+        {# One-click import — currently WooCommerce only #}
+        {% if addon.slug == 'woocommerce' and s.status == 'active' %}
+        <div class="mt-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-primary-700 shrink-0" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.707 7.793a1 1 0 0 0-1.414 0L11 10.086V1.5a1 1 0 0 0-2 0v8.586L6.707 7.793a1 1 0 1 0-1.414 1.414l4 4a1 1 0 0 0 1.416 0l4-4a1 1 0 0 0-.002-1.414ZM18 12h-2.55l-2.975 2.975a3.5 3.5 0 0 1-4.95 0L4.55 12H2a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2Z"/></svg>
+            <div class="flex-1 text-sm">
+              <p class="font-medium text-gray-900">Import existing products</p>
+              <p class="text-xs text-gray-600">Pull every WooCommerce product into ProductSync. Matched by SKU — duplicates are linked, not re-created. Runs in the background; this page stays usable.</p>
+            </div>
+            <form method="POST" action="{{ url_for('addons_ui.import_store', store_id=s.id) }}"
+                  onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerText = 'Starting…';">
+              <button type="submit"
+                      class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-xs px-3 py-2">
+                Import now
+              </button>
+            </form>
+          </div>
+
+          {# Auto-loaded import-progress fragment. HTMX fetches it on page load,
+             and the fragment itself adds an `every 2s` poll while a job is running. #}
+          <div hx-get="{{ url_for('addons_ui.import_progress', store_id=s.id) }}"
+               hx-trigger="load"
+               hx-swap="outerHTML"></div>
+        </div>
+        {% endif %}
+
+        <div class="mt-3 flex items-start gap-2 text-xs">
+          <span class="text-gray-500 shrink-0 mt-0.5">Webhook URL</span>
+          <code class="bg-gray-50 border border-gray-200 px-2 py-0.5 rounded text-gray-700 font-mono break-all">
+            {{ public_base_url }}{{ url_for('webhooks.receive', channel=s.channel, account_id=s.id) }}
+          </code>
+        </div>
+        {% if addon.slug == 'woocommerce' %}
+          <p class="mt-1 text-xs text-gray-400">
+            ProductSync registered the order webhook automatically when you connected. You can verify it in WP-admin → WooCommerce → Settings → Advanced → Webhooks.
+          </p>
+        {% endif %}
+        {% if s.last_error %}
+        <div class="mt-2 flex items-start gap-2 p-2 rounded bg-red-50 border border-red-200">
+          <svg class="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9 5a1 1 0 1 1 2 0v5a1 1 0 1 1-2 0V5Zm1 11a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Z"/></svg>
+          <p class="text-xs text-red-700">{{ s.last_error[:300] }}</p>
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="px-5 py-12 text-center">
+      <div class="text-gray-400 mb-3">
+        <svg class="w-10 h-10 mx-auto" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14 6v3a1 1 0 0 1-1 1h-2v2a1 1 0 0 1-1 1H8v2a1 1 0 0 1-1 1H5v2a1 1 0 0 1-1 1H1m13.4-12L17 11l-2.6 5.4M7 14V11M4 7l3-3 3 3M19 4l-3 3-3-3"/></svg>
+      </div>
+      <h3 class="text-sm font-medium text-gray-900 mb-1">No {{ addon.name }} stores connected yet</h3>
+      <p class="text-sm text-gray-500">Use the form on the right to connect your first one.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Connect form -->
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+    <h2 class="text-sm font-semibold text-gray-700 mb-1">Connect a {{ addon.name }} store</h2>
+    {% if addon.credential_help %}
+      <p class="text-xs text-gray-500 mb-4">{{ addon.credential_help }}</p>
+    {% endif %}
+
+    {% if addon.slug == 'woocommerce' %}
+    <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
+      <strong>Heads up:</strong> "WooCommerce" is a <em>top-level menu item</em> in WP-admin's
+      left sidebar (look for the shopping-bag icon). It's <strong>not</strong> under
+      WordPress's own "Settings" menu.
+    </div>
+    <details class="mb-4 group" open>
+      <summary class="cursor-pointer text-xs font-semibold text-gray-900 hover:text-primary-700 list-none flex items-center gap-1.5">
+        <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 6 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/></svg>
+        Step-by-step: generate your WooCommerce keys
+      </summary>
+      <ol class="mt-3 space-y-2.5 text-xs text-gray-600 list-decimal list-inside">
+        <li>In WP-admin's <strong>left sidebar</strong>, click <strong>WooCommerce</strong> (shopping-bag icon, top-level item — not WP's "Settings").</li>
+        <li>Inside the WooCommerce section, click <strong>Settings</strong>.</li>
+        <li>At the top of the Settings page, click the <strong>Advanced</strong> tab.</li>
+        <li>In the Advanced page's sub-links, click <strong>REST API</strong>.</li>
+        <li>Click <strong>Add key</strong>. Description: <code class="bg-gray-100 px-1 rounded">ProductSync</code>. Permissions: <strong>Read/Write</strong>. Click <strong>Generate API key</strong>.</li>
+        <li>Copy the <strong>Consumer key</strong> (starts with <code class="bg-gray-100 px-1 rounded">ck_</code>) and <strong>Consumer secret</strong> (starts with <code class="bg-gray-100 px-1 rounded">cs_</code>) — they're shown <strong>only once</strong>.</li>
+        <li>Paste both into the form below and click <strong>Connect store</strong>. We verify them before saving and register the order webhook for you.</li>
+      </ol>
+      <p class="mt-3 text-xs text-gray-500">
+        Reference:
+        <a href="https://woocommerce.com/document/woocommerce-rest-api/" target="_blank" rel="noopener noreferrer"
+           class="text-primary-700 hover:underline">official WooCommerce REST API docs ↗</a>
+      </p>
+    </details>
+    <details class="mb-4 group">
+      <summary class="cursor-pointer text-xs font-medium text-gray-700 hover:text-primary-700 list-none flex items-center gap-1.5">
+        <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 6 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/></svg>
+        Don't see "REST API" under Advanced? Troubleshooting
+      </summary>
+      <ul class="mt-3 space-y-2 text-xs text-gray-600 list-disc list-inside">
+        <li><strong>Older WooCommerce:</strong> upgrade to WC 3.4+ — earlier versions had keys elsewhere.</li>
+        <li><strong>Plugin conflict:</strong> a security plugin can hide the REST API. Disable it temporarily, or whitelist the WC REST API.</li>
+        <li><strong>Multisite:</strong> generate keys on the specific subsite, not the network admin.</li>
+        <li><strong>Permissions:</strong> you must be a WP admin (the "Administrator" role) on this site to see the API page.</li>
+      </ul>
+    </details>
+    {% endif %}
+    <form method="POST" action="{{ url_for('addons_ui.connect_store', slug=addon.slug) }}" class="space-y-4">
+      <div>
+        <label class="block mb-1.5 text-xs font-medium text-gray-700">Display name</label>
+        <input name="display_name" required placeholder="My {{ addon.name }} store"
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+      </div>
+      {% if 'base_url' in addon.fields %}
+      <div>
+        <label class="block mb-1.5 text-xs font-medium text-gray-700">Base URL</label>
+        <input name="base_url" required
+               placeholder="{% if addon.slug == 'shopify' %}https://your-shop.myshopify.com{% else %}https://shop.example.com{% endif %}"
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+      </div>
+      {% endif %}
+      {% if 'api_key' in addon.fields %}
+      <div>
+        <label class="block mb-1.5 text-xs font-medium text-gray-700">
+          {% if addon.slug == 'shopify' %}Admin API access token{% else %}Consumer key{% endif %}
+        </label>
+        <input name="api_key" required
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-xs font-mono rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+      </div>
+      {% endif %}
+      {% if 'api_secret' in addon.fields %}
+      <div>
+        <label class="block mb-1.5 text-xs font-medium text-gray-700">Consumer secret</label>
+        <input name="api_secret" required
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-xs font-mono rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+      </div>
+      {% endif %}
+      {% if 'webhook_secret' in addon.fields %}
+      <div>
+        <label class="block mb-1.5 text-xs font-medium text-gray-700">Webhook secret</label>
+        <input name="webhook_secret"
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-xs font-mono rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+        <p class="mt-1 text-xs text-gray-500">Used to verify inbound webhook signatures.</p>
+      </div>
+      {% endif %}
+      <button type="submit"
+              class="w-full text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5">
+        Connect store
+      </button>
+      <p class="text-xs text-gray-400">Credentials are encrypted at rest with Fernet.</p>
+    </form>
+  </div>
+
+</div>
+{% endif %}
+{% endblock %}

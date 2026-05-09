@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}ProductSync{% endblock %}</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.css" />
+
+  <script src="https://unpkg.com/htmx.org@2.0.2"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+          },
+          colors: {
+            primary: {
+              50:  '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a', 950: '#172554'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 antialiased">
+
+{% if current_user.is_authenticated %}
+{% set ep = request.endpoint or '' %}
+
+<header class="antialiased">
+  <nav class="bg-white border-b border-gray-200 px-4 lg:px-6 py-2.5 fixed top-0 left-0 right-0 z-50">
+    <div class="flex flex-wrap justify-between items-center">
+      <div class="flex justify-start items-center">
+
+        <!-- Sidebar toggle (lg+) -->
+        <button id="toggleSidebar" aria-expanded="true" aria-controls="sidebar"
+                class="hidden p-2 mr-3 text-gray-600 rounded cursor-pointer lg:inline hover:text-gray-900 hover:bg-gray-100">
+          <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h14M1 6h14M1 11h7"/></svg>
+          <span class="sr-only">Toggle sidebar</span>
+        </button>
+
+        <!-- Sidebar toggle (mobile) -->
+        <button id="toggleSidebarMobile" aria-expanded="false" aria-controls="sidebar"
+                class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer lg:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:ring-2 focus:ring-gray-100">
+          <svg class="w-[18px] h-[18px]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15"/></svg>
+          <span class="sr-only">Toggle sidebar</span>
+        </button>
+
+        <!-- Logo -->
+        <a href="{{ url_for('sync_ui.dashboard') }}" class="flex items-center mr-4">
+          <span class="self-center text-2xl font-semibold whitespace-nowrap text-primary-700">ProductSync</span>
+        </a>
+
+        <!-- Top search (products) -->
+        <form action="{{ url_for('catalogue.index') }}" method="GET" class="hidden lg:block lg:pl-2">
+          <label for="topbar-search" class="sr-only">Search products</label>
+          <div class="relative mt-1 lg:w-96">
+            <div class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none">
+              <svg class="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
+            </div>
+            <input type="text" name="q" id="topbar-search"
+                   class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-9 p-2.5"
+                   placeholder="Search products by title or SKU…" />
+          </div>
+        </form>
+      </div>
+
+      <div class="flex items-center lg:order-2">
+        <!-- Quick action -->
+        <a href="{{ url_for('catalogue.new') }}"
+           class="hidden sm:inline-flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-xs px-3 py-1.5 mr-2 focus:outline-none">
+          <svg aria-hidden="true" class="mr-1 -ml-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path></svg>
+          New product
+        </a>
+
+        <!-- Mobile search trigger -->
+        <button id="toggleSidebarMobileSearch" type="button"
+                class="p-2 text-gray-500 rounded-lg lg:hidden hover:text-gray-900 hover:bg-gray-100">
+          <span class="sr-only">Search</span>
+          <svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
+        </button>
+
+        <!-- Notifications -->
+        <button type="button" data-dropdown-toggle="notification-dropdown"
+                class="relative p-2 mr-1 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 focus:ring-4 focus:ring-gray-300">
+          <span class="sr-only">View notifications</span>
+          <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 14 20"><path d="M12.133 10.632v-1.8A5.406 5.406 0 0 0 7.979 3.57.946.946 0 0 0 8 3.464V1.1a1 1 0 0 0-2 0v2.364a.946.946 0 0 0 .021.106 5.406 5.406 0 0 0-4.154 5.262v1.8C1.867 13.018 0 13.614 0 14.807 0 15.4 0 16 .538 16h12.924C14 16 14 15.4 14 14.807c0-1.193-1.867-1.789-1.867-4.175ZM3.823 17a3.453 3.453 0 0 0 6.354 0H3.823Z"/></svg>
+          {% if nav_recent_events %}
+            <span class="absolute top-1.5 right-1.5 inline-flex w-2 h-2 bg-primary-600 rounded-full"></span>
+          {% endif %}
+        </button>
+        <div class="hidden overflow-hidden z-50 my-4 max-w-sm w-80 text-base list-none bg-white rounded divide-y divide-gray-100 shadow-lg" id="notification-dropdown">
+          <div class="block py-2 px-4 text-base font-medium text-center text-gray-700 bg-gray-50">
+            Recent sync activity
+          </div>
+          <div>
+            {% for e in nav_recent_events %}
+              <a href="{{ e.href }}" class="flex py-3 px-4 border-b hover:bg-gray-100">
+                <div class="flex-shrink-0">
+                  {% if e.kind == 'job' %}
+                    <div class="flex items-center justify-center w-9 h-9 rounded-full
+                      {% if e.status == 'succeeded' %}bg-green-100 text-green-700
+                      {% elif e.status == 'failed' %}bg-red-100 text-red-700
+                      {% else %}bg-gray-100 text-gray-500{% endif %}">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 18 12"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 6 4 4L17 1"/></svg>
+                    </div>
+                  {% else %}
+                    <div class="flex items-center justify-center w-9 h-9 rounded-full
+                      {% if e.status == 'valid' %}bg-primary-100 text-primary-700
+                      {% else %}bg-red-100 text-red-700{% endif %}">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 16 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 1v14M1 8h14"/></svg>
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="pl-3 w-full">
+                  <div class="text-gray-700 font-normal text-sm mb-1">
+                    {% if e.kind == 'job' %}Outbound:{% else %}Inbound:{% endif %}
+                    <span class="font-semibold text-gray-900">{{ e.title }}</span>
+                    <span class="text-gray-500">via {{ e.channel }}</span>
+                  </div>
+                  <div class="text-xs font-medium text-primary-700">{{ e.when | naturaltime }} · {{ e.status }}</div>
+                </div>
+              </a>
+            {% else %}
+              <p class="text-sm text-gray-400 px-4 py-6 text-center">No sync activity yet.</p>
+            {% endfor %}
+          </div>
+          <a href="{{ url_for('sync_ui.log') }}" class="block py-2 text-base font-medium text-center text-gray-900 bg-gray-50 hover:bg-gray-100">
+            <div class="inline-flex items-center">
+              <svg aria-hidden="true" class="mr-2 w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path></svg>
+              View sync log
+            </div>
+          </a>
+        </div>
+
+        <!-- User menu -->
+        <button type="button" id="user-menu-button" aria-expanded="false" data-dropdown-toggle="user-dropdown"
+                class="flex mx-3 text-sm bg-primary-700 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300">
+          <span class="sr-only">Open user menu</span>
+          <span class="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center text-xs font-semibold">
+            {{ current_user.name[0]|upper }}
+          </span>
+        </button>
+        <div class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow" id="user-dropdown">
+          <div class="py-3 px-4">
+            <span class="block text-sm font-semibold text-gray-900">{{ current_user.name }}</span>
+            <span class="block text-sm text-gray-500 truncate">{{ current_user.email }}</span>
+          </div>
+          <ul class="py-1 text-gray-500" aria-labelledby="user-dropdown">
+            <li><a href="{{ url_for('addons_ui.index') }}" class="block py-2 px-4 text-sm hover:bg-gray-100">Addons</a></li>
+          </ul>
+          <ul class="py-1 text-gray-500" aria-labelledby="user-dropdown">
+            <li><a href="{{ url_for('auth.logout') }}" class="block py-2 px-4 text-sm hover:bg-gray-100">Sign out</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!-- Sidebar -->
+<aside id="sidebar"
+       class="fixed top-0 left-0 z-40 w-64 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 lg:translate-x-0"
+       aria-label="Sidebar">
+  <div class="h-full px-3 py-4 overflow-y-auto bg-white">
+    {% macro side_link(endpoint_match, href, label, icon) -%}
+    <a href="{{ href }}" class="flex items-center p-2 rounded-lg text-base font-normal
+       {% if (endpoint_match is string and ep.startswith(endpoint_match)) or (endpoint_match is iterable and ep in endpoint_match) %}bg-primary-50 text-primary-700{% else %}text-gray-900 hover:bg-gray-100{% endif %}">
+      <span class="w-6 h-6 flex items-center justify-center mr-3
+        {% if (endpoint_match is string and ep.startswith(endpoint_match)) or (endpoint_match is iterable and ep in endpoint_match) %}text-primary-600{% else %}text-gray-500 group-hover:text-gray-900{% endif %}">{{ icon|safe }}</span>
+      <span class="flex-1 whitespace-nowrap">{{ label }}</span>
+    </a>
+    {%- endmacro %}
+
+    <ul class="space-y-2">
+      <li>{{ side_link('sync_ui.dashboard', url_for('sync_ui.dashboard'), 'Dashboard',
+        '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 10a8 8 0 1 1 16 0 8 8 0 0 1-16 0Zm9-7.93v3.86A4.002 4.002 0 0 1 13.93 9h3.86A8.008 8.008 0 0 0 11 2.07ZM4.07 11A8.008 8.008 0 0 0 9 17.93v-3.86A4.002 4.002 0 0 1 6.07 11H4.07Z"/></svg>') }}</li>
+      <li>{{ side_link('catalogue', url_for('catalogue.index'), 'Products',
+        '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 16" aria-hidden="true"><path d="M19 0H1a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1ZM2 6v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6H2Z"/></svg>') }}</li>
+      <li>{{ side_link('orders_ui', url_for('orders_ui.index'), 'Orders',
+        '<svg class="w-5 h-5" fill="none" viewBox="0 0 20 16" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 13a3 3 0 1 0 6 0 3 3 0 0 0-6 0Zm-7 0a3 3 0 1 0 6 0 3 3 0 0 0-6 0Zm-7 0a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/></svg>') }}</li>
+      <li>{{ side_link('addons_ui', url_for('addons_ui.index'), 'Addons',
+        '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M17 5h-2V3a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v2H7a1 1 0 0 0-1 1v3H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2V6a1 1 0 0 0-1-1Zm-6-1h2v3h-2V4Z"/></svg>') }}</li>
+      <li>{{ side_link('sync_ui.log', url_for('sync_ui.log'), 'Sync log',
+        '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .2.08.39.22.53l3 3a.75.75 0 0 0 1.06-1.06L10.75 9.69V5Z" clip-rule="evenodd"/></svg>') }}</li>
+    </ul>
+  </div>
+</aside>
+
+<main id="main-content" class="lg:ml-64 pt-14 transition-all">
+  <div class="px-4 lg:px-6 py-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+        <div id="flash-{{ loop.index }}" role="alert"
+             class="flex items-center p-3 mb-4 text-sm rounded-lg
+                    {% if category == 'error' %}bg-red-50 text-red-800 border border-red-200
+                    {% else %}bg-green-50 text-green-800 border border-green-200{% endif %}">
+          <svg class="shrink-0 w-4 h-4 me-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/></svg>
+          <span>{{ msg }}</span>
+          <button type="button" onclick="document.getElementById('flash-{{ loop.index }}').remove()"
+                  class="ms-auto text-current opacity-50 hover:opacity-100">×</button>
+        </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+{% else %}
+{# Unauthenticated layout: no nav, no sidebar #}
+<main class="max-w-screen-2xl mx-auto px-4 lg:px-6 py-8">
+  {% block guest_content %}{% block content_guest %}{{ self.content() }}{% endblock %}{% endblock %}
+</main>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+<script>
+  // Sidebar toggle behaviour:
+  //   lg+: clicking #toggleSidebar collapses the sidebar (hides it via translate-x), expands main to full width.
+  //   mobile: #toggleSidebarMobile slides the sidebar in/out.
+  (function () {
+    const sidebar = document.getElementById('sidebar');
+    const main = document.getElementById('main-content');
+    const toggleDesktop = document.getElementById('toggleSidebar');
+    const toggleMobile = document.getElementById('toggleSidebarMobile');
+    if (!sidebar || !main) return;
+
+    if (toggleDesktop) {
+      toggleDesktop.addEventListener('click', function () {
+        const collapsed = sidebar.classList.toggle('lg:-translate-x-full');
+        main.classList.toggle('lg:ml-64', !collapsed);
+        main.classList.toggle('lg:ml-0', collapsed);
+        this.setAttribute('aria-expanded', String(!collapsed));
+      });
+    }
+    if (toggleMobile) {
+      toggleMobile.addEventListener('click', function () {
+        const visible = sidebar.classList.toggle('-translate-x-full');
+        this.setAttribute('aria-expanded', String(!visible));
+      });
+    }
+    // Click outside to close sidebar on mobile
+    document.addEventListener('click', function (e) {
+      if (window.innerWidth >= 1024) return;
+      if (!sidebar.contains(e.target) && toggleMobile && !toggleMobile.contains(e.target)) {
+        if (!sidebar.classList.contains('-translate-x-full')) {
+          sidebar.classList.add('-translate-x-full');
+          toggleMobile.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  })();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

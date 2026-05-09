@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Orders — ProductSync{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Orders</h1>
+    <p class="text-sm text-gray-500 mt-1">Read-only feed of paid orders received from connected channels.</p>
+  </div>
+</div>
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+
+  <!-- Filter bar -->
+  <form method="GET" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 border-b border-gray-200">
+    <div class="relative flex-1 max-w-md">
+      <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
+      </div>
+      <input type="text" name="sku" value="{{ sku }}" placeholder="Filter by SKU…"
+             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-9 p-2" />
+    </div>
+    <select name="channel"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2">
+      <option value="">All channels</option>
+      {% for c in channels %}
+        <option value="{{ c.id }}" {% if channel_filter == c.id|string %}selected{% endif %}>{{ c.display_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit"
+            class="text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-2">
+      Filter
+    </button>
+  </form>
+
+  {% if orders %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left text-gray-700">
+      <thead class="text-xs text-gray-500 uppercase bg-gray-50 tracking-wide">
+        <tr>
+          <th scope="col" class="px-5 py-3">When</th>
+          <th scope="col" class="px-5 py-3">Channel</th>
+          <th scope="col" class="px-5 py-3">Remote ID</th>
+          <th scope="col" class="px-5 py-3">SKU</th>
+          <th scope="col" class="px-5 py-3 text-right">Qty</th>
+          <th scope="col" class="px-5 py-3 text-right">Total</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for o in orders %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-5 py-3 text-gray-500">{{ o.ordered_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td class="px-5 py-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-50 text-primary-700">
+              {{ o.channel_account.channel }}
+            </span>
+            <span class="text-gray-500 ml-1.5">{{ o.channel_account.display_name }}</span>
+          </td>
+          <td class="px-5 py-3 text-gray-500 font-mono text-xs">{{ o.remote_order_id }}</td>
+          <td class="px-5 py-3 font-mono text-gray-700">{{ o.sku }}</td>
+          <td class="px-5 py-3 text-right">{{ o.quantity }}</td>
+          <td class="px-5 py-3 text-right">
+            {% if o.total is not none %}
+              {{ '%.2f'|format(o.total) }} <span class="text-xs text-gray-500">{{ o.currency or '' }}</span>
+            {% else %}<span class="text-gray-400">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-5 py-12 text-center">
+    <div class="text-gray-400 mb-3">
+      <svg class="w-10 h-10 mx-auto" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14 13a3 3 0 1 0 6 0 3 3 0 0 0-6 0Zm-7 0a3 3 0 1 0 6 0 3 3 0 0 0-6 0Zm-7 0a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/></svg>
+    </div>
+    <h3 class="text-sm font-medium text-gray-900 mb-1">No orders match</h3>
+    <p class="text-sm text-gray-500">Adjust the filters or wait for orders to arrive via webhook.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

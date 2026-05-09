@@ -1,0 +1,214 @@
+{% extends 'marketing/_shell.html' %}
+{% block title %}ProductSync — One catalogue, every storefront{% endblock %}
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-white">
+  <div class="grid max-w-screen-xl px-4 py-12 mx-auto lg:gap-8 xl:gap-0 lg:py-20 lg:grid-cols-12 lg:px-6">
+    <div class="mr-auto place-self-center lg:col-span-7">
+      <span class="inline-flex items-center px-3 py-1 mb-5 text-xs font-medium text-primary-800 bg-primary-50 border border-primary-100 rounded-full">
+        <span class="w-1.5 h-1.5 bg-primary-600 rounded-full mr-2"></span>
+        Public beta
+      </span>
+      <h1 class="max-w-2xl mb-4 text-4xl font-extrabold tracking-tight leading-none md:text-5xl xl:text-6xl">
+        One catalogue.<br>
+        <span class="text-primary-700">Every storefront.</span>
+      </h1>
+      <p class="max-w-2xl mb-6 font-light text-gray-600 lg:mb-8 md:text-lg lg:text-xl">
+        Edit your products once. ProductSync pushes titles, descriptions, prices, and images to
+        WooCommerce and Shopify automatically — and pulls orders and inventory back so your stock
+        never lies. A booking-platform adapter is on the way.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="{{ url_for('auth.signup') }}"
+           class="inline-flex items-center justify-center px-5 py-3 text-base font-medium text-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 rounded-lg">
+          Get started free
+          <svg class="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1 0 1.414l-6 6a1 1 0 0 1-1.414-1.414L14.586 11H3a1 1 0 1 1 0-2h11.586l-4.293-4.293a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"/></svg>
+        </a>
+        <a href="#how-it-works"
+           class="inline-flex items-center justify-center px-5 py-3 text-base font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:ring-4 focus:ring-gray-100">
+          See how it works
+        </a>
+      </div>
+      <p class="mt-4 text-xs text-gray-500">No credit card. Free during beta.</p>
+    </div>
+    <div class="hidden lg:col-span-5 lg:flex items-center justify-center">
+      <!-- Stylised dashboard preview -->
+      <div class="relative w-full max-w-md">
+        <div class="absolute -inset-4 bg-gradient-to-br from-primary-100 to-primary-50 rounded-3xl blur-xl opacity-70"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+          <div class="flex items-center gap-1.5 bg-gray-50 border-b border-gray-200 px-4 py-2.5">
+            <span class="w-2.5 h-2.5 bg-red-400 rounded-full"></span>
+            <span class="w-2.5 h-2.5 bg-yellow-400 rounded-full"></span>
+            <span class="w-2.5 h-2.5 bg-green-400 rounded-full"></span>
+            <span class="ml-3 text-xs text-gray-400 font-mono">productsync.app/products</span>
+          </div>
+          <div class="p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs text-gray-500">All Products</p>
+                <p class="text-2xl font-bold text-gray-900">347</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Total stock</p>
+                <p class="text-2xl font-bold text-gray-900">12,841</p>
+              </div>
+            </div>
+            <div class="border-t border-gray-100 pt-3 space-y-2">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-amber-100 flex-shrink-0"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-gray-900">Brewers Mug</p>
+                  <p class="text-xs text-gray-500 font-mono">MUG-001</p>
+                </div>
+                <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded">✓ Woo</span>
+                <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded">✓ Shop</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-rose-100 flex-shrink-0"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-gray-900">Red T-shirt M</p>
+                  <p class="text-xs text-gray-500 font-mono">TEE-RED-M</p>
+                </div>
+                <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded">✓ Woo</span>
+                <span class="bg-gray-100 text-gray-500 text-xs font-medium px-2 py-0.5 rounded">Shop</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-emerald-100 flex-shrink-0"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-gray-900">Natural Tote</p>
+                  <p class="text-xs text-gray-500 font-mono">TOTE-NAT</p>
+                </div>
+                <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded">✓ Woo</span>
+                <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded">✓ Shop</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="bg-gray-50 border-y border-gray-100">
+  <div class="max-w-screen-xl px-4 py-16 mx-auto lg:px-6">
+    <div class="max-w-screen-md mb-10">
+      <h2 class="text-3xl font-bold tracking-tight text-gray-900">Built for the way real stores work.</h2>
+      <p class="mt-3 text-gray-600">Two-way sync isn't simple. ProductSync makes the right calls per field — so paid orders are sacred, content stays in your hands.</p>
+    </div>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-center w-10 h-10 mb-4 rounded-lg bg-primary-100 text-primary-700">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 16" aria-hidden="true"><path d="M19 0H1a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1ZM2 6v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6H2Z"/></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-1.5">Single source of truth</h3>
+        <p class="text-sm text-gray-600">Edit titles, descriptions, prices, and images in one place. Push to every channel with one click.</p>
+      </div>
+      <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-center w-10 h-10 mb-4 rounded-lg bg-primary-100 text-primary-700">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 22 16" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 1h4v4M20 5l-5 5M6 15H2v-4M2 11l5-5"/></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-1.5">Two-way sync, done right</h3>
+        <p class="text-sm text-gray-600">Orders and inventory flow in from your channels. Content and prices flow out from the dashboard. No conflicts.</p>
+      </div>
+      <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-center w-10 h-10 mb-4 rounded-lg bg-primary-100 text-primary-700">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 14 20" aria-hidden="true"><path d="M12.133 10.632v-1.8A5.406 5.406 0 0 0 7.979 3.57.946.946 0 0 0 8 3.464V1.1a1 1 0 0 0-2 0v2.364a.946.946 0 0 0 .021.106 5.406 5.406 0 0 0-4.154 5.262v1.8C1.867 13.018 0 13.614 0 14.807 0 15.4 0 16 .538 16h12.924C14 16 14 15.4 14 14.807c0-1.193-1.867-1.789-1.867-4.175ZM3.823 17a3.453 3.453 0 0 0 6.354 0H3.823Z"/></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-1.5">Webhooks both ways</h3>
+        <p class="text-sm text-gray-600">Real-time updates when an order lands or stock changes. No polling, no delay, full audit log.</p>
+      </div>
+      <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-center w-10 h-10 mb-4 rounded-lg bg-primary-100 text-primary-700">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 20 18" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 9V4.13a2.96 2.96 0 0 0-1.293.749L1.879 6.707A2.96 2.96 0 0 0 1.131 8H5Zm0 0h6v6H5V9Zm10-3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-1.5">Variants & SKU matching</h3>
+        <p class="text-sm text-gray-600">Full support for size/colour variants. SKUs are the canonical match key across channels — no guesswork.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how-it-works" class="bg-white">
+  <div class="max-w-screen-xl px-4 py-16 mx-auto lg:px-6">
+    <div class="max-w-screen-md mb-10">
+      <h2 class="text-3xl font-bold tracking-tight text-gray-900">From zero to synced in four steps.</h2>
+      <p class="mt-3 text-gray-600">A quick setup. Then it just runs.</p>
+    </div>
+    <ol class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      <li class="relative">
+        <div class="flex items-center justify-center w-10 h-10 mb-4 rounded-full bg-primary-700 text-white font-bold">1</div>
+        <h3 class="font-semibold text-gray-900 mb-1.5">Connect your stores</h3>
+        <p class="text-sm text-gray-600">Paste your WooCommerce or Shopify API credentials. Encrypted at rest.</p>
+      </li>
+      <li class="relative">
+        <div class="flex items-center justify-center w-10 h-10 mb-4 rounded-full bg-primary-700 text-white font-bold">2</div>
+        <h3 class="font-semibold text-gray-900 mb-1.5">Add your products</h3>
+        <p class="text-sm text-gray-600">Title, SKU, price, variants, images. Or import what's already on a connected channel.</p>
+      </li>
+      <li class="relative">
+        <div class="flex items-center justify-center w-10 h-10 mb-4 rounded-full bg-primary-700 text-white font-bold">3</div>
+        <h3 class="font-semibold text-gray-900 mb-1.5">Push to every channel</h3>
+        <p class="text-sm text-gray-600">One click syncs the product to every connected store. Mappings remembered automatically.</p>
+      </li>
+      <li class="relative">
+        <div class="flex items-center justify-center w-10 h-10 mb-4 rounded-full bg-primary-700 text-white font-bold">4</div>
+        <h3 class="font-semibold text-gray-900 mb-1.5">Stay in sync</h3>
+        <p class="text-sm text-gray-600">Webhooks keep stock honest in real time. An hourly reconciliation job catches anything missed.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- Field-policy callout -->
+<section class="bg-gray-50 border-y border-gray-100">
+  <div class="max-w-screen-xl px-4 py-16 mx-auto lg:px-6">
+    <div class="grid lg:grid-cols-2 gap-10 items-center">
+      <div>
+        <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Paid orders are sacred.</h2>
+        <p class="text-gray-600 mb-4">Most "two-way" sync tools let dashboard edits silently overwrite a paid order. ProductSync doesn't.</p>
+        <p class="text-gray-600">Each field has an explicit owner. Real orders, inventory, and stock decrements always flow from your channels. Content, images, and prices always flow from your dashboard. No conflict resolution screens. No data loss.</p>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-5 py-3 bg-gray-50 border-b border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-700">Sync direction by field</h3>
+        </div>
+        <ul class="divide-y divide-gray-100">
+          <li class="flex items-center justify-between px-5 py-3 text-sm">
+            <span>Title, description, images</span>
+            <span class="bg-primary-50 text-primary-700 text-xs font-medium px-2 py-0.5 rounded">Dashboard → channels</span>
+          </li>
+          <li class="flex items-center justify-between px-5 py-3 text-sm">
+            <span>Price, compare-at price</span>
+            <span class="bg-primary-50 text-primary-700 text-xs font-medium px-2 py-0.5 rounded">Dashboard → channels</span>
+          </li>
+          <li class="flex items-center justify-between px-5 py-3 text-sm">
+            <span>Inventory quantity</span>
+            <span class="bg-amber-50 text-amber-700 text-xs font-medium px-2 py-0.5 rounded">Channels → dashboard</span>
+          </li>
+          <li class="flex items-center justify-between px-5 py-3 text-sm">
+            <span>Paid orders</span>
+            <span class="bg-amber-50 text-amber-700 text-xs font-medium px-2 py-0.5 rounded">Channels → dashboard (append-only)</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="bg-white">
+  <div class="max-w-screen-xl px-4 py-16 mx-auto lg:px-6 text-center">
+    <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-3">Stop maintaining product data in three places.</h2>
+    <p class="text-gray-600 mb-8 max-w-2xl mx-auto">Spin up an account in under a minute. Free during beta — no credit card.</p>
+    <a href="{{ url_for('auth.signup') }}"
+       class="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 rounded-lg">
+      Create your free account
+      <svg class="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1 0 1.414l-6 6a1 1 0 0 1-1.414-1.414L14.586 11H3a1 1 0 1 1 0-2h11.586l-4.293-4.293a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"/></svg>
+    </a>
+  </div>
+</section>
+
+{% endblock %}

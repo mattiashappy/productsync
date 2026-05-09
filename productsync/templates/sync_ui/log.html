@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Sync log — ProductSync{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-gray-900">Sync log</h1>
+  <p class="text-sm text-gray-500 mt-1">Outbound jobs and inbound webhook events for debugging.</p>
+</div>
+
+<!-- Tabs -->
+<div class="mb-4 border-b border-gray-200">
+  <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="syncLogTabs" role="tablist">
+    <li class="me-2" role="presentation">
+      <button class="inline-block p-3 border-b-2 rounded-t-lg" id="jobs-tab" data-tabs-target="#jobs-tab-content" type="button" role="tab" aria-controls="jobs-tab-content" aria-selected="true">
+        Outbound jobs <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-semibold">{{ jobs|length }}</span>
+      </button>
+    </li>
+    <li class="me-2" role="presentation">
+      <button class="inline-block p-3 border-b-2 rounded-t-lg" id="events-tab" data-tabs-target="#events-tab-content" type="button" role="tab" aria-controls="events-tab-content" aria-selected="false">
+        Inbound events <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-semibold">{{ events|length }}</span>
+      </button>
+    </li>
+  </ul>
+</div>
+
+<div id="syncLogTabContent">
+
+  <!-- Outbound jobs -->
+  <div class="" id="jobs-tab-content" role="tabpanel" aria-labelledby="jobs-tab">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      {% if jobs %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-700">
+          <thead class="text-xs text-gray-500 uppercase bg-gray-50 tracking-wide">
+            <tr>
+              <th class="px-5 py-3">When</th>
+              <th class="px-5 py-3">Kind</th>
+              <th class="px-5 py-3">Channel</th>
+              <th class="px-5 py-3">Status</th>
+              <th class="px-5 py-3">Error</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for j in jobs %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-5 py-3 text-gray-500">{{ j.created_at.strftime('%m-%d %H:%M') }}</td>
+              <td class="px-5 py-3"><code class="text-xs">{{ j.kind }}</code></td>
+              <td class="px-5 py-3 text-gray-500">{{ j.channel_account.display_name if j.channel_account else '—' }}</td>
+              <td class="px-5 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                  {% if j.status == 'succeeded' %}bg-green-100 text-green-800
+                  {% elif j.status == 'failed' %}bg-red-100 text-red-800
+                  {% else %}bg-gray-100 text-gray-600{% endif %}">{{ j.status }}</span>
+              </td>
+              <td class="px-5 py-3">
+                {% if j.last_error %}<span class="text-xs text-red-600">{{ j.last_error[:160] }}</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500 px-5 py-8 text-center">No jobs yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Inbound events -->
+  <div class="hidden" id="events-tab-content" role="tabpanel" aria-labelledby="events-tab">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      {% if events %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-700">
+          <thead class="text-xs text-gray-500 uppercase bg-gray-50 tracking-wide">
+            <tr>
+              <th class="px-5 py-3">When</th>
+              <th class="px-5 py-3">Topic</th>
+              <th class="px-5 py-3">Channel</th>
+              <th class="px-5 py-3">Signature</th>
+              <th class="px-5 py-3">Error</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for e in events %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-5 py-3 text-gray-500">{{ e.received_at.strftime('%m-%d %H:%M') }}</td>
+              <td class="px-5 py-3"><code class="text-xs">{{ e.topic }}</code></td>
+              <td class="px-5 py-3 text-gray-500">{{ e.channel_account.display_name if e.channel_account else '—' }}</td>
+              <td class="px-5 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                  {% if e.signature_valid %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                  {{ 'valid' if e.signature_valid else 'invalid' }}
+                </span>
+              </td>
+              <td class="px-5 py-3">
+                {% if e.process_error %}<span class="text-xs text-red-600">{{ e.process_error[:160] }}</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500 px-5 py-8 text-center">No events received.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Initialize Flowbite tabs
+  document.addEventListener('DOMContentLoaded', function () {
+    const tabsEl = document.getElementById('syncLogTabs');
+    if (window.Tabs && tabsEl) {
+      new window.Tabs(tabsEl, [
+        { id: 'jobs-tab',   triggerEl: document.querySelector('#jobs-tab'),   targetEl: document.querySelector('#jobs-tab-content') },
+        { id: 'events-tab', triggerEl: document.querySelector('#events-tab'), targetEl: document.querySelector('#events-tab-content') },
+      ], { defaultTabId: 'jobs-tab', activeClasses: 'text-primary-600 border-primary-600', inactiveClasses: 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300' });
+    }
+  });
+</script>
+{% endblock %}

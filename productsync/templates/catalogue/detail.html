@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.title }} — ProductSync{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-start justify-between mb-6 gap-4">
+  <div>
+    <a href="{{ url_for('catalogue.index') }}" class="inline-flex items-center text-xs text-gray-500 hover:text-gray-900 mb-2">
+      <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 14 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5H1m0 0 4 4M1 5l4-4"/></svg>
+      All products
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900">{{ product.title }}</h1>
+    <div class="flex items-center gap-3 mt-1 text-xs text-gray-500">
+      <span class="font-mono">SKU {{ product.sku }}</span>
+      <span>·</span>
+      <span>Updated {{ product.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+      <span>·</span>
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+        {% if product.status == 'active' %}bg-green-100 text-green-800
+        {% elif product.status == 'archived' %}bg-gray-100 text-gray-600
+        {% else %}bg-yellow-100 text-yellow-800{% endif %}">{{ product.status }}</span>
+    </div>
+  </div>
+  <form method="POST" action="{{ url_for('catalogue.delete', product_id=product.id) }}"
+        onsubmit="return confirm('Delete this product? This also removes channel link mappings.');">
+    <button type="submit"
+            class="text-red-600 bg-white hover:bg-red-50 border border-red-200 focus:ring-4 focus:outline-none focus:ring-red-100 font-medium rounded-lg text-sm px-4 py-2">
+      Delete
+    </button>
+  </form>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Main column -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Details card -->
+    <form method="POST" action="{{ url_for('catalogue.edit', product_id=product.id) }}"
+          class="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <h2 class="text-sm font-semibold text-gray-700">Details</h2>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Title</label>
+            <input type="text" name="title" value="{{ product.title }}" required
+                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">SKU</label>
+            <input type="text" name="sku" value="{{ product.sku }}" required
+                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm font-mono rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Price</label>
+            <input type="number" step="0.01" name="price" value="{{ product.price if product.price is not none else '' }}"
+                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Compare at</label>
+            <input type="number" step="0.01" name="compare_at_price" value="{{ product.compare_at_price if product.compare_at_price is not none else '' }}"
+                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Currency</label>
+            <input type="text" name="currency" value="{{ product.currency }}" maxlength="3"
+                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Status</label>
+            <select name="status"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
+              {% for s in PRODUCT_STATUSES %}<option value="{{ s }}" {% if s == product.status %}selected{% endif %}>{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-gray-700">Description</label>
+          <textarea name="description" rows="6"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">{{ product.description or '' }}</textarea>
+        </div>
+      </div>
+      <div class="px-5 py-3 border-t border-gray-100 flex justify-end">
+        <button type="submit"
+                class="text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2">
+          Save changes
+        </button>
+      </div>
+    </form>
+
+    <!-- Variants card -->
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+        <h2 class="text-sm font-semibold text-gray-700">Variants</h2>
+        <span class="text-xs text-gray-400">Total stock: <span class="font-semibold text-gray-700">{{ product.total_inventory }}</span></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-700">
+          <thead class="text-xs text-gray-500 uppercase bg-gray-50 tracking-wide">
+            <tr>
+              <th class="px-5 py-3">Variant</th>
+              <th class="px-5 py-3">SKU</th>
+              <th class="px-5 py-3 text-right">Price</th>
+              <th class="px-5 py-3 text-right">Stock</th>
+              <th class="px-5 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for v in product.variants %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-5 py-3">{{ v.display_title }}</td>
+              <td class="px-5 py-3 font-mono text-gray-700">{{ v.sku }}</td>
+              <td class="px-5 py-3 text-right">
+                {% if v.price_override is not none %}{{ v.price_override }}
+                {% elif product.price is not none %}<span class="text-gray-500">{{ product.price }}</span>
+                {% else %}<span class="text-gray-400">—</span>{% endif %}
+              </td>
+              <td class="px-5 py-3 text-right {% if v.inventory_quantity == 0 %}text-red-600 font-medium{% endif %}">{{ v.inventory_quantity }}</td>
+              <td class="px-5 py-3 text-right">
+                {% if product.variants|length > 1 %}
+                <form method="POST" action="{{ url_for('catalogue.delete_variant', variant_id=v.id) }}" class="inline"
+                      onsubmit="return confirm('Delete this variant?');">
+                  <button class="text-xs text-red-500 hover:text-red-700">Delete</button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <form method="POST" action="{{ url_for('catalogue.add_variant', product_id=product.id) }}"
+            class="border-t border-gray-100 bg-gray-50 px-5 py-4">
+        <div class="text-xs font-medium text-gray-700 mb-2">Add variant</div>
+        <div class="grid grid-cols-12 gap-2">
+          <input name="option1_name" placeholder="Option 1 name" class="col-span-3 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-2" />
+          <input name="option1_value" placeholder="Value" class="col-span-3 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-2" />
+          <input name="option2_name" placeholder="Option 2 name" class="col-span-3 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-2" />
+          <input name="option2_value" placeholder="Value" class="col-span-3 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-2" />
+          <input name="sku" required placeholder="SKU *" class="col-span-4 bg-white border border-gray-300 text-gray-900 text-xs font-mono rounded-lg p-2" />
+          <input name="inventory_quantity" type="number" placeholder="Stock" value="0" class="col-span-2 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-2" />
+          <input name="price_override" type="number" step="0.01" placeholder="Price override (optional)" class="col-span-3 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-2" />
+          <button class="col-span-3 text-white bg-primary-600 hover:bg-primary-700 font-medium text-xs rounded-lg p-2">+ Add variant</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Images card -->
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <h2 class="text-sm font-semibold text-gray-700">Images</h2>
+      </div>
+      <div class="px-5 py-4">
+        {% if product.images %}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {% for img in product.images %}
+          <div class="relative group">
+            <img src="{{ img.url }}" alt="{{ img.alt or '' }}" class="w-full h-28 object-cover rounded-lg border border-gray-200" />
+            <form method="POST" action="{{ url_for('catalogue.delete_image', image_id=img.id) }}"
+                  class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition">
+              <button class="bg-white/90 hover:bg-white text-red-600 text-xs px-2 py-0.5 rounded-full shadow border border-gray-200">×</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-xs text-gray-400 text-center py-6">No images yet.</p>
+        {% endif %}
+      </div>
+      <form method="POST" action="{{ url_for('catalogue.add_image', product_id=product.id) }}"
+            class="border-t border-gray-100 bg-gray-50 px-5 py-3 flex gap-2">
+        <input name="url" placeholder="Image URL (https://…)" required
+               class="flex-1 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-2" />
+        <input name="alt" placeholder="Alt text" class="w-40 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg p-2" />
+        <button class="text-white bg-primary-600 hover:bg-primary-700 font-medium text-xs rounded-lg px-3 py-2">+ Add</button>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Sidebar: channel sync -->
+  <aside class="space-y-6">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <h2 class="text-sm font-semibold text-gray-700">Channel sync</h2>
+      </div>
+      {% if channels %}
+      <ul class="divide-y divide-gray-100">
+        {% for c in channels %}
+        {% set link = links_by_account.get(c.id) %}
+        <li class="px-5 py-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900">{{ c.display_name }}</p>
+              <p class="text-xs text-gray-400">{{ c.channel }}</p>
+            </div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+              {% if link %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-500{% endif %}">
+              {{ 'linked' if link else 'not pushed' }}
+            </span>
+          </div>
+          {% if link and link.last_pushed_at %}
+          <p class="text-xs text-gray-400 mt-2">Last pushed {{ link.last_pushed_at.strftime('%Y-%m-%d %H:%M') }}</p>
+          {% endif %}
+          {% if c.last_error %}
+          <div class="mt-2 p-2 rounded bg-red-50 border border-red-200">
+            <p class="text-xs text-red-700">{{ c.last_error[:200] }}</p>
+          </div>
+          {% endif %}
+          <form method="POST" action="{{ url_for('catalogue.push', product_id=product.id, channel_account_id=c.id) }}" class="mt-3">
+            <button class="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-xs px-3 py-2">
+              Push now →
+            </button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="px-5 py-8 text-center">
+        <p class="text-sm text-gray-500 mb-3">No channels connected.</p>
+        <a href="{{ url_for('addons_ui.index') }}"
+           class="inline-flex items-center gap-2 text-primary-700 bg-primary-50 hover:bg-primary-100 font-medium rounded-lg text-sm px-3 py-2">
+          Connect a channel →
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </aside>
+
+</div>
+{% endblock %}

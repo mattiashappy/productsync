@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% block title %}Products — ProductSync{% endblock %}
+{% block content %}
+
+{# Helper macro: rebuild the current querystring with overrides for pagination links #}
+{% macro page_url(target_page) -%}
+  {{ url_for('catalogue.index', q=q or none, status=status or none, page=target_page) }}
+{%- endmacro %}
+
+<section class="bg-gray-50 py-3 sm:py-5">
+  <div class="mx-auto">
+    <div class="relative overflow-hidden bg-white shadow-md sm:rounded-lg">
+
+      <!-- Toolbar: KPIs + actions -->
+      <div class="flex flex-col px-4 py-3 space-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:space-x-4">
+        <div class="flex items-center flex-1 space-x-4">
+          <h5>
+            <span class="text-gray-500">All Products:</span>
+            <span class="text-gray-900 font-semibold">{{ '{:,}'.format(total_products) }}</span>
+          </h5>
+          <h5>
+            <span class="text-gray-500">Total stock:</span>
+            <span class="text-gray-900 font-semibold">{{ '{:,}'.format(total_inventory) }} units</span>
+          </h5>
+        </div>
+        <div class="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
+          <a href="{{ url_for('catalogue.new') }}"
+             class="flex items-center justify-center px-4 py-2 text-sm font-medium text-white rounded-lg bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 focus:outline-none">
+            <svg class="h-3.5 w-3.5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path clip-rule="evenodd" fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+            </svg>
+            Add new product
+          </a>
+        </div>
+      </div>
+
+      <!-- Search + status filter row -->
+      <div class="flex flex-col px-4 py-3 space-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:space-x-4 border-t border-gray-200">
+        <form method="GET" class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+          <div class="relative w-full sm:w-72">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
+            </div>
+            <input type="text" name="q" value="{{ q }}" placeholder="Search title or SKU…"
+                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-9 p-2" />
+          </div>
+          <select name="status"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2">
+            <option value="">All statuses</option>
+            {% for s in PRODUCT_STATUSES %}
+              <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s|capitalize }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit"
+                  class="text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-2">
+            Filter
+          </button>
+          {% if q or status %}
+            <a href="{{ url_for('catalogue.index') }}"
+               class="text-sm text-gray-500 hover:text-gray-900 self-center">Clear</a>
+          {% endif %}
+        </form>
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-500">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+            <tr>
+              <th scope="col" class="p-4">
+                <div class="flex items-center">
+                  <input id="checkbox-all" type="checkbox"
+                         class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 focus:ring-2" />
+                  <label for="checkbox-all" class="sr-only">checkbox</label>
+                </div>
+              </th>
+              <th scope="col" class="px-4 py-3">Product</th>
+              <th scope="col" class="px-4 py-3">Status</th>
+              <th scope="col" class="px-4 py-3">Stock</th>
+              <th scope="col" class="px-4 py-3">Price</th>
+              <th scope="col" class="px-4 py-3">Channels</th>
+              <th scope="col" class="px-4 py-3">Last update</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in products %}
+              {% set linked_ids = p.channel_links | selectattr('variant_id', 'none') | map(attribute='channel_account_id') | list %}
+              {% set thumb = p.images[0].url if p.images else none %}
+              <tr class="border-b hover:bg-gray-100">
+                <td class="w-4 px-4 py-3">
+                  <div class="flex items-center">
+                    <input id="checkbox-{{ p.id }}" type="checkbox" onclick="event.stopPropagation()"
+                           class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 focus:ring-2" />
+                    <label for="checkbox-{{ p.id }}" class="sr-only">select</label>
+                  </div>
+                </td>
+                <th scope="row" class="flex items-center px-4 py-2 font-medium text-gray-900 whitespace-nowrap">
+                  {% if thumb %}
+                    <img src="{{ thumb }}" alt="{{ p.title }}" class="w-auto h-8 mr-3 rounded" />
+                  {% else %}
+                    <div class="w-8 h-8 mr-3 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-300">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 18 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h16v14H1V1Zm0 11 4-4 5 5m-2-2 3-3 4 4"/></svg>
+                    </div>
+                  {% endif %}
+                  <a href="{{ url_for('catalogue.detail', product_id=p.id) }}" class="hover:text-primary-700 hover:underline">
+                    <div>{{ p.title }}</div>
+                    <div class="text-xs text-gray-500 font-mono font-normal">{{ p.sku }}</div>
+                  </a>
+                </th>
+                <td class="px-4 py-2">
+                  {% if p.status == 'active' %}
+                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded capitalize">Active</span>
+                  {% elif p.status == 'archived' %}
+                    <span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded capitalize">Archived</span>
+                  {% else %}
+                    <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded capitalize">Draft</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap">
+                  <div class="flex items-center">
+                    {% set stk = p.total_inventory %}
+                    {% if stk == 0 %}
+                      <div class="inline-block w-4 h-4 mr-2 bg-red-500 rounded-full" title="Out of stock"></div>
+                    {% elif stk <= 10 %}
+                      <div class="inline-block w-4 h-4 mr-2 bg-yellow-400 rounded-full" title="Low stock"></div>
+                    {% else %}
+                      <div class="inline-block w-4 h-4 mr-2 bg-green-500 rounded-full" title="In stock"></div>
+                    {% endif %}
+                    {{ stk }}
+                  </div>
+                </td>
+                <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap">
+                  {% if p.price is not none %}
+                    {{ '%.2f'|format(p.price) }} <span class="text-xs text-gray-500 font-normal">{{ p.currency }}</span>
+                  {% else %}
+                    <span class="text-gray-400">—</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-2">
+                  {% if channels %}
+                    {% for c in channels %}
+                      {% if c.id in linked_ids %}
+                        <span title="{{ c.display_name }} — linked"
+                              class="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded mr-1 capitalize">
+                          ✓ {{ c.channel[:4] }}
+                        </span>
+                      {% else %}
+                        <span title="{{ c.display_name }} — not pushed"
+                              class="inline-flex items-center bg-gray-100 text-gray-500 text-xs font-medium px-2 py-0.5 rounded mr-1 capitalize">
+                          {{ c.channel[:4] }}
+                        </span>
+                      {% endif %}
+                    {% endfor %}
+                  {% else %}
+                    <span class="text-xs text-gray-400">no channels</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap">
+                  {{ p.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="7" class="px-4 py-12 text-center">
+                  <div class="text-gray-400 mb-3">
+                    <svg class="w-10 h-10 mx-auto" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10l8 4 8-4V7l-8-4-8 4Zm0 0 8 4m0 0 8-4m-8 4v10"/></svg>
+                  </div>
+                  {% if q or status %}
+                    <h3 class="text-sm font-medium text-gray-900 mb-1">No products match</h3>
+                    <p class="text-sm text-gray-500">Try adjusting the search or filter.</p>
+                  {% else %}
+                    <h3 class="text-sm font-medium text-gray-900 mb-1">No products yet</h3>
+                    <p class="text-sm text-gray-500 mb-4">Create your first product to start syncing it across channels.</p>
+                    <a href="{{ url_for('catalogue.new') }}"
+                       class="inline-flex items-center gap-2 text-white bg-primary-700 hover:bg-primary-800 font-medium rounded-lg text-sm px-4 py-2">
+                      + New product
+                    </a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if pagination.pages > 1 %}
+      <nav class="flex flex-col items-start justify-between p-4 space-y-3 md:flex-row md:items-center md:space-y-0" aria-label="Table navigation">
+        <span class="text-sm font-normal text-gray-500">
+          Showing
+          <span class="font-semibold text-gray-900">{{ ((pagination.page - 1) * pagination.per_page) + 1 }}-{{ ((pagination.page - 1) * pagination.per_page) + pagination.items|length }}</span>
+          of
+          <span class="font-semibold text-gray-900">{{ pagination.total }}</span>
+        </span>
+        <ul class="inline-flex items-stretch -space-x-px">
+          <li>
+            {% if pagination.has_prev %}
+              <a href="{{ page_url(pagination.prev_num) }}"
+                 class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700">
+            {% else %}
+              <span class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-300 bg-white rounded-l-lg border border-gray-300 cursor-not-allowed">
+            {% endif %}
+              <span class="sr-only">Previous</span>
+              <svg class="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+            {% if pagination.has_prev %}</a>{% else %}</span>{% endif %}
+          </li>
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p is none %}
+              <li><span class="flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 bg-white border border-gray-300">…</span></li>
+            {% elif p == pagination.page %}
+              <li>
+                <a href="{{ page_url(p) }}" aria-current="page"
+                   class="z-10 flex items-center justify-center px-3 py-2 text-sm leading-tight border text-primary-600 bg-primary-50 border-primary-300 hover:bg-primary-100 hover:text-primary-700">{{ p }}</a>
+              </li>
+            {% else %}
+              <li>
+                <a href="{{ page_url(p) }}"
+                   class="flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700">{{ p }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+          <li>
+            {% if pagination.has_next %}
+              <a href="{{ page_url(pagination.next_num) }}"
+                 class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700">
+            {% else %}
+              <span class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-300 bg-white rounded-r-lg border border-gray-300 cursor-not-allowed">
+            {% endif %}
+              <span class="sr-only">Next</span>
+              <svg class="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+            {% if pagination.has_next %}</a>{% else %}</span>{% endif %}
+          </li>
+        </ul>
+      </nav>
+      {% endif %}
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
