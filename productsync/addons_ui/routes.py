@@ -74,24 +74,24 @@ ADDONS: dict[str, dict] = {
         "color_bg": "bg-emerald-100",
         "color_text": "text-emerald-700",
     },
-    "bokun": {
-        "slug": "bokun",
-        "channel": "bokun",
-        "name": "Bokun",
-        "category": "Booking",
-        "tagline": "Tours, activities, and experiences from Bokun.",
+    "webflow": {
+        "slug": "webflow",
+        "channel": "webflow",
+        "name": "Webflow",
+        "category": "E-commerce",
+        "tagline": "Sync products with your Webflow Ecommerce store.",
         "description": (
-            "Coming soon. Sync activity availability, prices, and bookings between Bokun "
-            "and the dashboard."
+            "Coming soon. Push titles, prices, variants, and images to Webflow "
+            "Ecommerce via the Designer API; pull paid orders back."
         ),
-        "docs_url": "https://bokun.dev/",
+        "docs_url": "https://developers.webflow.com/",
         "credential_help": "",
         "fields": [],
         "status": "coming_soon",
         "logo": None,  # falls back to icon_letter chip
-        "icon_letter": "B",
-        "color_bg": "bg-amber-100",
-        "color_text": "text-amber-700",
+        "icon_letter": "W",
+        "color_bg": "bg-indigo-100",
+        "color_text": "text-indigo-700",
     },
 }
 
