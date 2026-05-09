@@ -5,6 +5,7 @@
   <div class="flex flex-col items-center justify-center px-4 py-10 mx-auto md:py-16">
     <div class="w-full bg-white rounded-lg shadow border border-gray-200 sm:max-w-md">
       <div class="p-6 space-y-5 sm:p-8">
+
         <div>
           <span class="inline-flex items-center px-2.5 py-1 mb-3 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-full">
             <span class="w-1.5 h-1.5 bg-amber-600 rounded-full mr-1.5"></span>
@@ -16,40 +17,62 @@
           <p class="text-sm text-gray-500 mt-2">
             Stop maintaining your product line in spreadsheets and email threads.
             ProductSync is being built as the single place to manage your full
-            range, with every connected store kept current automatically. Claim
-            your distributor slot — we'll email you the moment it opens.
+            range, with every connected store kept current automatically.
           </p>
         </div>
 
-        <form method="POST" class="space-y-4">
+        <!-- Step indicator + progress bar -->
+        <div>
+          <div class="flex items-baseline justify-between mb-1.5">
+            <p id="ps-step-label" class="text-xs font-semibold text-primary-700 uppercase tracking-wide">
+              Step <span data-current-step>1</span> of 2 · <span data-step-name>Your account</span>
+            </p>
+            <p class="text-xs text-gray-400" data-step-counter>1 / 2</p>
+          </div>
+          <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div id="ps-progress" class="h-full bg-primary-700 transition-all duration-300" style="width: 50%"></div>
+          </div>
+        </div>
 
-          <!-- Identity -->
-          <div>
-            <label for="name" class="block mb-1.5 text-sm font-medium text-gray-900">Your name</label>
-            <input type="text" name="name" id="name" required value="{{ form.name }}"
-                   placeholder="Mattias Olsson"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
-          </div>
-          <div>
-            <label for="email" class="block mb-1.5 text-sm font-medium text-gray-900">Work email</label>
-            <input type="email" name="email" id="email" required value="{{ form.email }}"
-                   placeholder="name@yourcompany.com"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
-          </div>
-          <div>
-            <label for="password" class="block mb-1.5 text-sm font-medium text-gray-900">Password</label>
-            <input type="password" name="password" id="password" required minlength="8" placeholder="••••••••"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
-            <p class="mt-1 text-xs text-gray-500">At least 8 characters.</p>
-          </div>
-          <div>
-            <label for="password_confirm" class="block mb-1.5 text-sm font-medium text-gray-900">Confirm password</label>
-            <input type="password" name="password_confirm" id="password_confirm" required minlength="8" placeholder="••••••••"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
-          </div>
+        <form id="ps-signup-form" method="POST" class="space-y-4" novalidate>
 
-          <!-- Distributor-specific section -->
-          <div class="pt-3 border-t border-gray-100 space-y-4">
+          <!-- Step 1: Identity / credentials -->
+          <fieldset data-step="1" class="space-y-4">
+            <div>
+              <label for="name" class="block mb-1.5 text-sm font-medium text-gray-900">Your name</label>
+              <input type="text" name="name" id="name" required value="{{ form.name }}"
+                     placeholder="Mattias Olsson"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+            <div>
+              <label for="email" class="block mb-1.5 text-sm font-medium text-gray-900">Work email</label>
+              <input type="email" name="email" id="email" required value="{{ form.email }}"
+                     placeholder="name@yourcompany.com"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+            <div>
+              <label for="password" class="block mb-1.5 text-sm font-medium text-gray-900">Password</label>
+              <input type="password" name="password" id="password" required minlength="8" placeholder="••••••••"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+              <p class="mt-1 text-xs text-gray-500">At least 8 characters.</p>
+            </div>
+            <div>
+              <label for="password_confirm" class="block mb-1.5 text-sm font-medium text-gray-900">Confirm password</label>
+              <input type="password" name="password_confirm" id="password_confirm" required minlength="8" placeholder="••••••••"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button type="button" data-action="next"
+                      class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 rounded-lg">
+                Continue
+                <svg class="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1 0 1.414l-6 6a1 1 0 0 1-1.414-1.414L14.586 11H3a1 1 0 1 1 0-2h11.586l-4.293-4.293a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"/></svg>
+              </button>
+            </div>
+          </fieldset>
+
+          <!-- Step 2: Your brand (public profile) -->
+          <fieldset data-step="2" class="space-y-4" hidden>
             <div>
               <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Your brand</p>
               <p class="text-xs text-gray-500 mt-0.5">This is the public face of your distributor account. Subscribed stores will see this.</p>
@@ -107,7 +130,6 @@
                 <option value="201-1000" {% if form.product_count_estimate == '201-1000' %}selected{% endif %}>201–1,000</option>
                 <option value="1000+" {% if form.product_count_estimate == '1000+' %}selected{% endif %}>1,000+</option>
               </select>
-              <p class="mt-1 text-xs text-gray-500">We'll size your import experience appropriately.</p>
             </div>
 
             <div>
@@ -118,37 +140,99 @@
                      placeholder="Sweden"
                      class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
             </div>
-          </div>
 
-          <div class="flex items-start pt-1">
-            <div class="flex items-center h-5">
-              <input id="terms" name="terms" type="checkbox" required
-                     class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300" />
+            <div class="flex items-start pt-1">
+              <div class="flex items-center h-5">
+                <input id="terms" name="terms" type="checkbox" required
+                       class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300" />
+              </div>
+              <label for="terms" class="ml-2 text-sm font-light text-gray-600">
+                I accept the <a href="#" class="font-medium text-primary-700 hover:underline">terms</a> and
+                <a href="#" class="font-medium text-primary-700 hover:underline">privacy policy</a>.
+              </label>
             </div>
-            <label for="terms" class="ml-2 text-sm font-light text-gray-600">
-              I accept the <a href="#" class="font-medium text-primary-700 hover:underline">terms</a> and
-              <a href="#" class="font-medium text-primary-700 hover:underline">privacy policy</a>.
-            </label>
-          </div>
-          <button type="submit"
-                  class="w-full text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-            Claim distributor slot
-          </button>
-          <div class="text-sm font-light text-gray-500 space-y-1.5">
-            <p>
-              Running an e-commerce store instead?
-              <a href="{{ url_for('auth.signup') }}" class="font-medium text-primary-700 hover:underline">
-                Sign up as a store
-              </a>
-            </p>
-            <p>
-              Already have an account?
-              <a href="{{ url_for('auth.login') }}" class="font-medium text-primary-700 hover:underline">Sign in</a>
-            </p>
-          </div>
+
+            <div class="flex items-center justify-between pt-2 gap-3">
+              <button type="button" data-action="back"
+                      class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-100">
+                <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 14 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5H1m0 0 4 4M1 5l4-4"/></svg>
+                Back
+              </button>
+              <button type="submit"
+                      class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 rounded-lg">
+                Claim distributor slot
+              </button>
+            </div>
+          </fieldset>
         </form>
+
+        <div class="text-sm font-light text-gray-500 space-y-1.5 pt-2 border-t border-gray-100">
+          <p>
+            Running an e-commerce store instead?
+            <a href="{{ url_for('auth.signup') }}" class="font-medium text-primary-700 hover:underline">
+              Sign up as a store
+            </a>
+          </p>
+          <p>
+            Already have an account?
+            <a href="{{ url_for('auth.login') }}" class="font-medium text-primary-700 hover:underline">Sign in</a>
+          </p>
+        </div>
       </div>
     </div>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const initialStep = {{ initial_step|default(1) }};
+  const stepNames = { 1: 'Your account', 2: 'Your brand' };
+  const form = document.getElementById('ps-signup-form');
+  const steps = {
+    1: form.querySelector('[data-step="1"]'),
+    2: form.querySelector('[data-step="2"]'),
+  };
+  const indicator = document.querySelector('[data-current-step]');
+  const stepName = document.querySelector('[data-step-name]');
+  const counter = document.querySelector('[data-step-counter]');
+  const progress = document.getElementById('ps-progress');
+
+  function show(step) {
+    Object.entries(steps).forEach(([n, el]) => { el.hidden = (Number(n) !== step); });
+    indicator.textContent = step;
+    stepName.textContent = stepNames[step];
+    counter.textContent = `${step} / 2`;
+    progress.style.width = (step === 1 ? '50%' : '100%');
+    const firstInput = steps[step].querySelector('input,select,textarea');
+    if (firstInput) setTimeout(() => firstInput.focus(), 50);
+  }
+
+  document.querySelector('[data-action="next"]').addEventListener('click', () => {
+    const inputs = steps[1].querySelectorAll('input[required], select[required]');
+    let allValid = true;
+    inputs.forEach((input) => {
+      if (!input.checkValidity()) {
+        input.reportValidity();
+        allValid = false;
+      }
+    });
+    const pw = form.querySelector('#password').value;
+    const pwc = form.querySelector('#password_confirm').value;
+    if (allValid && pw !== pwc) {
+      const target = form.querySelector('#password_confirm');
+      target.setCustomValidity("Passwords don't match.");
+      target.reportValidity();
+      target.addEventListener('input', () => target.setCustomValidity(''), { once: true });
+      return;
+    }
+    if (allValid) show(2);
+  });
+
+  document.querySelector('[data-action="back"]').addEventListener('click', () => show(1));
+
+  show(initialStep);
+})();
+</script>
 {% endblock %}

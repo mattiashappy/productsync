@@ -94,7 +94,13 @@ def _signup_handler(*, account_type: str, template: str, welcome_redirect_endpoi
         if errors:
             for e in errors:
                 flash(e, "error")
-            return render_template(template, form=form)
+            # Re-render on step 2 by default (the user just submitted from
+            # step 2). If the issue is a step-1-only field — bad email or
+            # email-already-taken — put them back on step 1 so the field
+            # they need to fix is in front of them.
+            step1_only = ("email address", "already exists", "your name", "8 characters", "passwords don't match")
+            initial_step = 1 if any(any(k in e.lower() for k in step1_only) for e in errors) else 2
+            return render_template(template, form=form, initial_step=initial_step)
 
         account_name = (
             form["company"]
