@@ -1,187 +1,194 @@
 # Deploying ProductSync to Heroku
 
-Three environments, three Heroku apps, one git repo with three remotes:
+**Current setup:** one production app on Heroku, autodeploying from `main` on
+GitHub. Testing and staging happen on your laptop until traffic justifies
+spinning up additional Heroku stages.
 
-| Stage      | Heroku app             | Git remote        | Purpose                              |
-|------------|------------------------|-------------------|--------------------------------------|
-| Testing    | `productsync-test`     | `heroku-test`     | Latest commits, throwaway data       |
-| Staging    | `productsync-staging`  | `heroku-staging`  | Pre-prod validation, near-prod data  |
-| Production | `productsync-prod`     | `heroku-prod`     | Live customers                       |
+```
+┌────────────┐                ┌─────────────────────┐
+│ git push   │  →  origin/main  →  Heroku autodeploy → released
+└────────────┘                └─────────────────────┘
 
-**Key rule:** each environment has its **own** `ENCRYPTION_KEY`, `SECRET_KEY`, Postgres database, and webhook URLs. Credentials encrypted in test will *never* decrypt in prod. That's intentional — it's a security boundary, not a bug.
+local dev (sqlite)            production (Postgres)
+  ↑
+  daily work
+```
 
 ---
 
-## One-time setup (do this once on your laptop)
+## First-time configuration of the autodeploy app
 
-### 1. Git repo
+After you've created the app in the Heroku dashboard and connected GitHub
+autodeploy, **run the configure script once** to:
 
-ProductSync lives at <https://github.com/mattiashappy/productsync> — that's the canonical source. Heroku apps are deployed from local pushes via per-stage remotes (set up by the script in step 3). The flow looks like:
-
-```
-local main ── push ──► origin (GitHub)        # canonical history, backup, PRs
-            └─ push ─► heroku-test            # auto-deploys to test
-            └─ push ─► heroku-staging         # auto-deploys to staging
-            └─ push ─► heroku-prod            # auto-deploys to production
-```
-
-If you're starting on a fresh laptop:
+- Provision Postgres
+- Generate and set `SECRET_KEY` and `ENCRYPTION_KEY` (strong random)
+- Set `FLASK_APP=wsgi.py`, `ENABLE_SCHEDULER=1`, `PUBLIC_BASE_URL=<app URL>`
+- Apply database migrations
+- Seed the default admin user
 
 ```bash
-git clone https://github.com/mattiashappy/productsync.git
-cd productsync
+heroku login                                     # one-time
+heroku apps                                      # find your app name
+./scripts/heroku-configure.sh <your-app-name>
 ```
 
-If git's TLS handshake fails with "unable to get local issuer certificate" (corporate AV / Avast / Zscaler intercepting HTTPS), switch git to use the OS certificate store:
+The script is **idempotent** — re-running it is safe, and crucially it will
+**never overwrite an existing `ENCRYPTION_KEY`**. (Rotating that key would
+make every encrypted store credential unrecoverable.)
 
-```bash
-git config --global http.sslBackend schannel   # Windows
+After this:
+
 ```
-
-### 2. Install + log into the Heroku CLI
-
-```bash
-brew install heroku/brew/heroku           # macOS
-# or: https://devcenter.heroku.com/articles/heroku-cli for Windows/Linux
-heroku login
+heroku open -a <your-app-name>                   # open in browser
+# log in as admin@example.com / changeme123 — change the password immediately
 ```
-
-### 3. Provision all three Heroku apps
-
-The included `scripts/heroku-setup.sh` handles one stage at a time. Run it three times:
-
-```bash
-./scripts/heroku-setup.sh test
-./scripts/heroku-setup.sh staging
-./scripts/heroku-setup.sh prod
-```
-
-Each invocation will:
-
-- Create the Heroku app (e.g. `productsync-test`)
-- Provision a Heroku Postgres add-on (essential-0)
-- Generate a fresh `SECRET_KEY` and `ENCRYPTION_KEY` and set them as config vars
-- Set `ENABLE_SCHEDULER=1` (hourly reconciliation runs in the web dyno)
-- Add a git remote (`heroku-test`, `heroku-staging`, `heroku-prod`)
-- Scale the worker dyno to 0 (we don't use RQ yet — Procfile entry stays in place for later)
-- Print the auto-generated app URL so you can set `PUBLIC_BASE_URL` next
-
-### 4. Set `PUBLIC_BASE_URL` per stage
-
-Heroku assigns each app a URL like `https://productsync-test-1a2b3c4d.herokuapp.com`. After app creation, copy the URL the script prints and set it:
-
-```bash
-heroku config:set PUBLIC_BASE_URL=https://productsync-test-1a2b3c.herokuapp.com -a productsync-test
-heroku config:set PUBLIC_BASE_URL=https://productsync-staging-... -a productsync-staging
-heroku config:set PUBLIC_BASE_URL=https://productsync-prod-... -a productsync-prod
-```
-
-`PUBLIC_BASE_URL` is what the app uses when registering webhooks with WooCommerce/Shopify — it must match the public URL of the Heroku app, otherwise webhooks won't be delivered.
 
 ---
 
 ## Daily deploy workflow
 
+Just push to GitHub. Heroku does the rest.
+
 ```bash
-# 1. Always test first
-git push heroku-test main
-
-# 2. If it works, promote to staging
-git push heroku-staging main
-
-# 3. If staging is good for a day, promote to prod
-git push heroku-prod main
+git add .
+git commit -m "fix: <what you fixed>"
+git push origin main
 ```
 
-The `release:` step in [Procfile](Procfile) runs `flask db upgrade` automatically on each push, so migrations apply before the new dynos take traffic. If a migration fails, the release phase aborts and the old dynos keep serving — you don't get a half-migrated app.
+Heroku watches `origin/main`, builds a slug, runs the release phase
+(`flask db upgrade`), and rolls new dynos. If migrations fail, the release
+phase aborts and the old dynos keep serving traffic — you don't get a
+half-migrated app.
 
-### Seed the first admin user (once per environment, on first deploy only)
-
-```bash
-heroku run flask seed -a productsync-test
-heroku run flask seed -a productsync-staging
-heroku run flask seed -a productsync-prod
-```
-
-This creates `admin@example.com` / `changeme123`. **Change the password immediately on prod** by signing in and rotating it (or by running a one-off `heroku run python` script — until we build a settings page).
-
----
-
-## Useful per-stage commands
+Watch the build:
 
 ```bash
-heroku logs --tail -a productsync-prod                           # live logs
-heroku ps -a productsync-prod                                    # dyno status
-heroku run flask --app wsgi shell -a productsync-prod            # interactive REPL
-heroku pg:psql -a productsync-prod                               # Postgres shell
-heroku config -a productsync-prod                                # all env vars
-heroku releases -a productsync-prod                              # deploy history
-heroku rollback -a productsync-prod                              # undo last deploy
+heroku logs --tail -a <your-app-name>
 ```
 
 ---
 
-## What costs you per month (USD, as of writing)
+## Local dev = your "testing/staging"
 
-Per app:
-- **Eco dyno** (web): $5 (sleeps after 30 min idle — fine for testing)
-- OR **Basic dyno** (web): $7 (always-on; recommended for staging + prod)
-- **Postgres essential-0**: $5
-- **Total per stage**: $10–12
-
-Three stages: ~$30–36/month total. You can downgrade testing to Eco dynos any time:
+For now, develop and test locally before pushing to main:
 
 ```bash
-heroku ps:type web=eco -a productsync-test
-heroku ps:type web=basic -a productsync-prod
+cd productsync
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+# Generate ENCRYPTION_KEY:
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Paste it into .env
+
+flask db upgrade
+flask seed
+flask --app wsgi run --debug
 ```
+
+Each branch / feature can be tested locally against a SQLite DB before being
+merged to `main` and shipped to prod. When you eventually want a real
+preprod environment, see the "Adding a staging Heroku app" section below.
+
+### Faking webhooks against your local instance
+
+WooCommerce can't reach your laptop directly. Use a tunnel:
+
+```bash
+# ngrok (easiest)
+ngrok http 5001
+# Cloudflare Tunnel is the free permanent alternative:
+# https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+```
+
+Set `PUBLIC_BASE_URL` in `.env` to the tunnel URL, then connect WooCommerce.
+The auto-registered webhook will point at the tunnel and orders will fire
+through to your local dev instance.
 
 ---
 
-## When you actually need the worker dyno (later)
+## Things you'll want to do soon (recommended order)
 
-Right now product import runs inside the web request via a Python thread. Heroku web dynos have a 30-second request timeout, so for stores beyond ~500 products the import won't finish before the dyno kills the request — though it will still commit each completed page.
+1. **Change the default admin password.** `admin@example.com / changeme123` is
+   public knowledge — rotate it via the app or a `heroku run python` shell.
 
-When real users hit that limit:
+2. **Hook up a custom domain** when you're ready:
+   ```bash
+   heroku domains:add productsync.com -a <app>
+   heroku certs:auto:enable -a <app>
+   heroku config:set PUBLIC_BASE_URL=https://productsync.com -a <app>
+   ```
 
-```bash
-heroku addons:create heroku-redis:mini -a productsync-prod   # ~$15/mo
-heroku ps:scale worker=1 -a productsync-prod
-```
+3. **Enable backups:**
+   ```bash
+   heroku pg:backups:schedule DATABASE_URL --at "02:00 Europe/Stockholm" -a <app>
+   ```
 
-…then swap the Python thread in `addons_ui/routes.py` for an RQ enqueue (`get_queue().enqueue(...)`). The `SyncJob`-based progress model already works the same way regardless of which executor runs the import.
-
----
-
-## Custom domains (when you're ready)
-
-```bash
-heroku domains:add productsync.com -a productsync-prod
-heroku domains:add staging.productsync.com -a productsync-staging
-heroku certs:auto:enable -a productsync-prod
-```
-
-Heroku will print the DNS targets to point your A/CNAME records at. Then update `PUBLIC_BASE_URL` to the new domain.
+4. **Upgrade dyno** if it's getting hit:
+   ```bash
+   heroku ps:type web=basic -a <app>     # always-on, $7/mo
+   heroku ps:type web=standard-1x -a <app>   # production-grade, $25/mo
+   ```
 
 ---
 
-## Disaster recovery
+## Adding a staging Heroku app later (when traffic justifies it)
 
-```bash
-# Backups
-heroku pg:backups:capture -a productsync-prod
-heroku pg:backups:download -a productsync-prod        # downloads latest.dump
+Same pattern: create another app, connect GitHub autodeploy from a different
+branch, run the configure script. Suggested branch layout:
 
-# Restore
-heroku pg:backups:restore latest -a productsync-prod  # from prod
-heroku pg:backups:restore $(heroku pg:backups:url -a productsync-prod) DATABASE_URL -a productsync-staging   # copy prod -> staging
-```
+| Branch    | Heroku app             | Purpose                |
+|-----------|------------------------|------------------------|
+| `main`    | `productsync-prod`     | Live customers         |
+| `staging` | `productsync-staging`  | Pre-prod validation    |
+
+Workflow becomes:
+- Develop on a feature branch → merge to `staging` → autodeploys to staging
+- Test against the staging app
+- Promote to `main` → autodeploys to prod
+
+The configure script works the same way for the new app.
 
 ---
 
-## Common first-deploy gotchas
+## Common gotchas
 
-- **"No web processes running"** — first deploy didn't include `Procfile`. Confirm `Procfile` is at the same level as `requirements.txt` in the deployed dir.
-- **Release phase fails** — the `flask db upgrade` step needs `FLASK_APP=wsgi.py` to find the app. Set it: `heroku config:set FLASK_APP=wsgi.py -a productsync-test`.
-- **`ENCRYPTION_KEY is not set`** at runtime — the setup script sets this; if you skipped the script, generate one with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` and `heroku config:set ENCRYPTION_KEY=...`.
-- **Webhooks return 404** in WooCommerce — `PUBLIC_BASE_URL` is wrong. Check `heroku info -a <app>` for the actual URL.
+- **`ENCRYPTION_KEY is not set`** at runtime → the configure script wasn't run
+  (or skipped silently). Run it. If you have already encrypted credentials in
+  the DB and lost the key, those credentials are unrecoverable; you'll have to
+  delete and re-add the affected stores.
+
+- **Webhooks return 404** in WooCommerce → `PUBLIC_BASE_URL` is wrong. Check
+  `heroku config -a <app>` against `heroku info -a <app>`.
+
+- **Release phase fails with "no such command 'db'"** → `FLASK_APP` not set.
+  Run `heroku config:set FLASK_APP=wsgi.py -a <app>`.
+
+- **Build fails on requirements** → make sure you're pushing from the project
+  root where `Procfile` and `requirements.txt` live. If your repo has the
+  ProductSync code in a subdirectory (e.g. `productsync/`), Heroku won't find
+  it; either move files to the repo root or use the multi-procfile buildpack.
+
+- **App says "Not Found" on the homepage** → the deploy itself probably worked
+  but something in the app is throwing. Check `heroku logs --tail`.
+
+- **TLS certificate errors when connecting WooCommerce stores** → the app uses
+  the `truststore` package, which on Heroku reads the system CA bundle.
+  Should "just work" — but if a store is behind an unusual cert authority,
+  contact me and we'll add the cert.
+
+---
+
+## Useful per-app commands
+
+```bash
+heroku logs --tail -a <app>                           # live logs
+heroku ps -a <app>                                    # dyno status
+heroku run flask --app wsgi shell -a <app>            # interactive REPL
+heroku pg:psql -a <app>                               # Postgres shell
+heroku config -a <app>                                # all env vars
+heroku releases -a <app>                              # deploy history
+heroku rollback -a <app>                              # undo last deploy
+```
