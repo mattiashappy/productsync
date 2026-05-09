@@ -88,7 +88,8 @@ ADDONS: dict[str, dict] = {
         "credential_help": "",
         "fields": [],
         "status": "coming_soon",
-        "logo": None,  # falls back to icon_letter chip
+        "logo": "img/webflow-glyph.svg",
+        "logo_wordmark": "img/webflow-logo.svg",
         "icon_letter": "W",
         "color_bg": "bg-indigo-100",
         "color_text": "text-indigo-700",
