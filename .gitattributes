@@ -1,0 +1,21 @@
+# Default: let Git auto-handle line endings per file type.
+* text=auto
+
+# Files that MUST stay LF on every platform (or they break on Linux/Heroku).
+*.sh             text eol=lf
+*.py             text eol=lf
+Procfile         text eol=lf
+runtime.txt      text eol=lf
+requirements.txt text eol=lf
+.env.example     text eol=lf
+
+# Templates render the same regardless, but LF keeps diffs clean.
+*.html           text eol=lf
+
+# Binary — never touch.
+*.png            binary
+*.jpg            binary
+*.jpeg           binary
+*.gif            binary
+*.ico            binary
+*.pdf            binary
