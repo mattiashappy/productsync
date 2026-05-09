@@ -155,6 +155,47 @@ class WooCommerceChannel(Channel):
                 raise ChannelError(f"WC variations fetch failed [{resp.status_code}]: {resp.text[:200]}")
             return resp.json()
 
+    def pull_all_categories(self) -> list[dict[str, Any]]:
+        """Paginate through every product category in the WC store. Returns
+        the flat list — parent_id resolution happens in the importer.
+        """
+        return self._paginate_all("/products/categories")
+
+    def pull_all_brands(self) -> list[dict[str, Any]]:
+        """WC 9.0+ native brands taxonomy. Older stores don't have it (the
+        endpoint may 404 or 501). Returns [] in that case so the import
+        keeps working on pre-9.0 stores without manual fallback.
+        """
+        from flask import current_app
+        try:
+            return self._paginate_all("/products/brands")
+        except ChannelError as exc:
+            current_app.logger.info("WC brands taxonomy unavailable on this store (probably WC < 9.0): %s", exc)
+            return []
+
+    def _paginate_all(self, path: str, per_page: int = 100, max_pages: int = 50) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        with self._client() as client:
+            page = 1
+            while page <= max_pages:
+                resp = client.get(path, params={"per_page": per_page, "page": page})
+                if resp.status_code == 404 or resp.status_code == 501:
+                    raise ChannelError(f"endpoint {path} returned {resp.status_code} (taxonomy not installed?)")
+                if resp.status_code >= 400:
+                    raise ChannelError(f"WC fetch {path} failed [{resp.status_code}]: {resp.text[:200]}")
+                rows = resp.json()
+                if not rows:
+                    break
+                out.extend(rows)
+                try:
+                    total_pages = int(resp.headers.get("X-WP-TotalPages", "1"))
+                except ValueError:
+                    total_pages = 1
+                if page >= total_pages:
+                    break
+                page += 1
+        return out
+
     # ── Webhook ─────────────────────────────────────────────────────────────
     def parse_webhook(self, headers: dict[str, str], body: bytes) -> ChannelEvent:
         secret = decrypt(self.channel_account.webhook_secret_enc) or ""

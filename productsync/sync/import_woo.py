@@ -20,7 +20,8 @@ from ..channels.base import ChannelError
 from ..channels.woocommerce import WooCommerceChannel
 from ..extensions import db
 from ..models import (
-    ChannelAccount, ChannelLink, Product, ProductImage, ProductVariant, SyncJob,
+    Brand, Category, ChannelAccount, ChannelLink, Product, ProductImage,
+    ProductVariant, SyncJob,
 )
 
 
@@ -121,9 +122,27 @@ def _run(channel_account_id: int, max_pages: int, job: SyncJob | None) -> tuple[
         raise ChannelError("This importer only supports WooCommerce stores.")
 
     result = ImportResult()
+
+    # ── Phase A: pull + upsert taxonomies BEFORE products so we can link them
+    # as we go. Cheap (one or two API calls each, both cap at 50 pages of 100).
+    if job is not None:
+        job.payload = _payload(processed=0, total=None,
+                               message="Importing categories…",
+                               errors=[], finished=False)
+        db.session.commit()
+    category_map = _upsert_categories(account, adapter)
+
+    if job is not None:
+        job.payload = _payload(processed=0, total=None,
+                               message="Importing brands…",
+                               errors=[], finished=False)
+        db.session.commit()
+    brand_map = _upsert_brands(account, adapter)
+
     page = 1
 
-    # First call: fetch page 1 + the exact total from WC's X-WP-Total header.
+    # ── Phase B: pull + import products. Each product is now linked to local
+    # Category + Brand rows via category_map and brand_map.
     products, total_pages, total_count = adapter.pull_products_page(page=1, per_page=100)
     # Fall back to a page-based estimate if the header was missing for some reason.
     estimated_total = total_count or (total_pages * 100)
@@ -140,7 +159,7 @@ def _run(channel_account_id: int, max_pages: int, job: SyncJob | None) -> tuple[
     while products:
         for wc_product in products:
             try:
-                _import_one(account, adapter, wc_product, result)
+                _import_one(account, adapter, wc_product, result, category_map, brand_map)
             except Exception as exc:  # noqa: BLE001
                 db.session.rollback()
                 result.failed += 1
@@ -203,6 +222,8 @@ def _import_one(
     adapter: WooCommerceChannel,
     wc_product: dict[str, Any],
     result: ImportResult,
+    category_map: dict[str, Category] | None = None,
+    brand_map: dict[str, Brand] | None = None,
 ) -> None:
     remote_id = str(wc_product.get("id"))
     title = wc_product.get("name") or "(untitled)"
@@ -284,6 +305,21 @@ def _import_one(
     else:
         result.linked_existing += 1
 
+    # Link to local Category + Brand rows (idempotent — append only if not
+    # already present). The maps are populated in Phase A by the importer.
+    if category_map:
+        existing_cat_ids = {c.id for c in product.categories}
+        for cat_ref in (wc_product.get("categories") or []):
+            local = category_map.get(str(cat_ref.get("id")))
+            if local is not None and local.id not in existing_cat_ids:
+                product.categories.append(local)
+    if brand_map:
+        existing_brand_ids = {b.id for b in product.brands}
+        for brand_ref in (wc_product.get("brands") or []):
+            local = brand_map.get(str(brand_ref.get("id")))
+            if local is not None and local.id not in existing_brand_ids:
+                product.brands.append(local)
+
     db.session.add(
         ChannelLink(
             product_id=product.id,
@@ -357,3 +393,82 @@ def _resolve_product_sku(wc_product: dict[str, Any], remote_id: str, product_typ
         slug = (wc_product.get("slug") or "").strip()
         return slug or f"wc-{remote_id}"
     return None
+
+
+# ── Taxonomy upsert helpers ─────────────────────────────────────────────────
+def _upsert_categories(account: ChannelAccount, adapter: WooCommerceChannel) -> dict[str, Category]:
+    """Pull WC categories and upsert local Category rows. Returns a map of
+    str(remote_id) → local Category. Resolves parent_id in a second pass
+    because WC may return children before parents.
+    """
+    try:
+        wc_cats = adapter.pull_all_categories()
+    except ChannelError:
+        return {}
+
+    # First pass: ensure each row exists locally, update name/slug
+    by_remote: dict[str, Category] = {}
+    for wc in wc_cats:
+        rid = str(wc.get("id"))
+        cat = (
+            db.session.query(Category)
+            .filter_by(account_id=account.account_id, remote_source="woocommerce", remote_id=rid)
+            .first()
+        )
+        if cat is None:
+            cat = Category(
+                account_id=account.account_id,
+                remote_source="woocommerce",
+                remote_id=rid,
+                name=wc.get("name") or "(unnamed)",
+                slug=wc.get("slug") or None,
+            )
+            db.session.add(cat)
+        else:
+            cat.name = wc.get("name") or cat.name
+            cat.slug = wc.get("slug") or cat.slug
+        by_remote[rid] = cat
+    db.session.flush()  # need ids for parent resolution
+
+    # Second pass: set parent_id (WC parent==0 means top-level)
+    for wc in wc_cats:
+        parent_remote = wc.get("parent")
+        if not parent_remote:
+            continue
+        parent = by_remote.get(str(parent_remote))
+        if parent is not None:
+            child = by_remote[str(wc["id"])]
+            child.parent_id = parent.id
+    db.session.commit()
+    return by_remote
+
+
+def _upsert_brands(account: ChannelAccount, adapter: WooCommerceChannel) -> dict[str, Brand]:
+    """Pull WC brands (WC 9.0+) and upsert local Brand rows. Returns a map of
+    str(remote_id) → local Brand. Returns {} if the brands taxonomy isn't
+    installed on the WC store (older versions).
+    """
+    wc_brands = adapter.pull_all_brands()
+    by_remote: dict[str, Brand] = {}
+    for wc in wc_brands:
+        rid = str(wc.get("id"))
+        brand = (
+            db.session.query(Brand)
+            .filter_by(account_id=account.account_id, remote_source="woocommerce", remote_id=rid)
+            .first()
+        )
+        if brand is None:
+            brand = Brand(
+                account_id=account.account_id,
+                remote_source="woocommerce",
+                remote_id=rid,
+                name=wc.get("name") or "(unnamed)",
+                slug=wc.get("slug") or None,
+            )
+            db.session.add(brand)
+        else:
+            brand.name = wc.get("name") or brand.name
+            brand.slug = wc.get("slug") or brand.slug
+        by_remote[rid] = brand
+    db.session.commit()
+    return by_remote

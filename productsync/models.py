@@ -14,10 +14,27 @@ JsonType = JSON().with_variant(JSONB(), "postgresql")
 
 
 PRODUCT_STATUSES = ["draft", "active", "archived"]
+PRODUCT_TYPES = ["simple", "variable"]              # derived from variant count, not stored
+STOCK_STATUSES = ["in_stock", "low_stock", "out_of_stock"]
+LOW_STOCK_THRESHOLD = 10                            # ≤10 = "low stock"; configurable per-account next iteration
 CHANNEL_KINDS = ["woocommerce", "shopify"]
-SYNC_JOB_KINDS = ["push_product", "push_inventory", "pull_inventory", "webhook"]
+SYNC_JOB_KINDS = ["push_product", "push_inventory", "pull_inventory", "webhook", "import_woo"]
 SYNC_JOB_STATUSES = ["queued", "running", "succeeded", "failed"]
 ACCOUNT_TYPES = ["store", "distributor"]
+
+
+# ── Many-to-many association tables ─────────────────────────────────────────
+product_category = db.Table(
+    "product_category",
+    db.Column("product_id", db.Integer, db.ForeignKey("product.id"), primary_key=True),
+    db.Column("category_id", db.Integer, db.ForeignKey("category.id"), primary_key=True),
+)
+
+product_brand = db.Table(
+    "product_brand",
+    db.Column("product_id", db.Integer, db.ForeignKey("product.id"), primary_key=True),
+    db.Column("brand_id", db.Integer, db.ForeignKey("brand.id"), primary_key=True),
+)
 
 
 class Account(db.Model):
@@ -92,6 +109,15 @@ class Product(db.Model):
     channel_links = db.relationship(
         "ChannelLink", backref="product", cascade="all, delete-orphan", lazy="selectin",
     )
+    # Taxonomy links — many-to-many, populated by the importer + (later) manual editor
+    categories = db.relationship(
+        "Category", secondary=product_category,
+        backref=db.backref("products", lazy="dynamic"), lazy="selectin",
+    )
+    brands = db.relationship(
+        "Brand", secondary=product_brand,
+        backref=db.backref("products", lazy="dynamic"), lazy="selectin",
+    )
 
     __table_args__ = (
         db.UniqueConstraint("account_id", "sku", name="uq_product_account_sku"),
@@ -104,6 +130,21 @@ class Product(db.Model):
     @property
     def total_inventory(self) -> int:
         return sum((v.inventory_quantity or 0) for v in self.variants)
+
+    @property
+    def product_type(self) -> str:
+        """Derived: simple = exactly one variant, variable = two or more."""
+        return "variable" if len(self.variants) > 1 else "simple"
+
+    @property
+    def stock_status(self) -> str:
+        """Derived from total_inventory and the LOW_STOCK_THRESHOLD constant."""
+        total = self.total_inventory
+        if total <= 0:
+            return "out_of_stock"
+        if total <= LOW_STOCK_THRESHOLD:
+            return "low_stock"
+        return "in_stock"
 
 
 class ProductVariant(db.Model):
@@ -242,3 +283,47 @@ class WebhookEvent(db.Model):
     process_error = db.Column(db.Text)
 
     channel_account = db.relationship("ChannelAccount", lazy="joined")
+
+
+# ── Taxonomies (Category, Brand) ────────────────────────────────────────────
+class Category(db.Model):
+    """Hierarchical product category. Mirrors WooCommerce's category taxonomy.
+    Each account has its own tree (account-scoped). For top-level categories
+    parent_id is NULL. Imported from WC via remote_id; manual editing UI is
+    a future iteration."""
+    __tablename__ = "category"
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("account.id"), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    slug = db.Column(db.String(200))
+    parent_id = db.Column(db.Integer, db.ForeignKey("category.id"))    # nullable = top-level
+    remote_id = db.Column(db.String(120))                               # WC category id
+    remote_source = db.Column(db.String(40))                            # 'woocommerce'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    parent = db.relationship("Category", remote_side=[id], backref="children")
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "remote_source", "remote_id",
+                            name="uq_category_account_remote"),
+        db.Index("ix_category_account_parent", "account_id", "parent_id"),
+    )
+
+
+class Brand(db.Model):
+    """Flat brand. Each product can have multiple brands (WC 9.0 brand
+    taxonomy semantics). Account-scoped, imported via remote_id."""
+    __tablename__ = "brand"
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("account.id"), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    slug = db.Column(db.String(200))
+    remote_id = db.Column(db.String(120))                               # WC brand id
+    remote_source = db.Column(db.String(40))                            # 'woocommerce'
+    logo_url = db.Column(db.Text)                                       # populated later
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "remote_source", "remote_id",
+                            name="uq_brand_account_remote"),
+    )

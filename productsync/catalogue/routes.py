@@ -7,7 +7,9 @@ from flask_login import current_user, login_required
 
 from ..extensions import db
 from ..models import (
-    PRODUCT_STATUSES, ChannelAccount, ChannelLink, Product, ProductImage, ProductVariant,
+    LOW_STOCK_THRESHOLD, PRODUCT_STATUSES, PRODUCT_TYPES, STOCK_STATUSES,
+    Brand, Category, ChannelAccount, ChannelLink, Product, ProductImage,
+    ProductVariant, product_brand, product_category,
 )
 from ..sync.push import push_product
 
@@ -41,22 +43,70 @@ def _owned_product_or_404(product_id: int) -> Product:
 @login_required
 def index():
     aid = current_user.account_id
+
+    # ── Filter inputs ──────────────────────────────────────────────────────
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "").strip()
+    category_id = _int(request.args.get("category", ""), default=0) or None
+    brand_ids = _csv_ints(request.args.get("brand", ""))
+    ptype = request.args.get("type", "").strip()
+    stock = request.args.get("stock", "").strip()
     page = max(1, int(request.args.get("page", 1) or 1))
     per_page = 10
 
     query = Product.query.filter_by(account_id=aid)
+
     if q:
         like = f"%{q}%"
         query = query.filter(db.or_(Product.title.ilike(like), Product.sku.ilike(like)))
     if status in PRODUCT_STATUSES:
         query = query.filter(Product.status == status)
-    query = query.order_by(Product.updated_at.desc())
+
+    # Category filter — hierarchical: include selected category AND all descendants
+    if category_id:
+        descendant_ids = _walk_descendants(aid, category_id)
+        if descendant_ids:
+            query = (query.join(product_category, Product.id == product_category.c.product_id)
+                          .filter(product_category.c.category_id.in_(descendant_ids)))
+
+    # Brand filter — OR semantics across the selected brand ids
+    if brand_ids:
+        query = (query.join(product_brand, Product.id == product_brand.c.product_id)
+                      .filter(product_brand.c.brand_id.in_(brand_ids)))
+
+    # Product type — derived from variant count, expressed as HAVING clause
+    if ptype in PRODUCT_TYPES:
+        # subquery: variant count per product
+        vc = (db.session.query(
+                ProductVariant.product_id.label("pid"),
+                db.func.count(ProductVariant.id).label("cnt"))
+              .group_by(ProductVariant.product_id).subquery())
+        if ptype == "simple":
+            query = (query.outerjoin(vc, vc.c.pid == Product.id)
+                          .filter(db.or_(vc.c.cnt == None, vc.c.cnt <= 1)))  # noqa: E711
+        else:  # variable
+            query = query.join(vc, vc.c.pid == Product.id).filter(vc.c.cnt > 1)
+
+    # Stock status — derived from SUM(inventory_quantity) per product
+    if stock in STOCK_STATUSES:
+        inv = (db.session.query(
+                ProductVariant.product_id.label("pid"),
+                db.func.coalesce(db.func.sum(ProductVariant.inventory_quantity), 0).label("total"))
+               .group_by(ProductVariant.product_id).subquery())
+        query = query.outerjoin(inv, inv.c.pid == Product.id)
+        if stock == "out_of_stock":
+            query = query.filter(db.or_(inv.c.total == None, inv.c.total <= 0))  # noqa: E711
+        elif stock == "low_stock":
+            query = query.filter(inv.c.total > 0, inv.c.total <= LOW_STOCK_THRESHOLD)
+        elif stock == "in_stock":
+            query = query.filter(inv.c.total > LOW_STOCK_THRESHOLD)
+
+    # If we joined m2m tables, multiple matches per product can duplicate rows
+    query = query.distinct().order_by(Product.updated_at.desc())
 
     pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
 
-    # Toolbar KPIs (unfiltered totals)
+    # Toolbar KPIs (always unfiltered)
     total_products = Product.query.filter_by(account_id=aid).count()
     total_inventory = (
         db.session.query(db.func.coalesce(db.func.sum(ProductVariant.inventory_quantity), 0))
@@ -66,17 +116,89 @@ def index():
     ) or 0
 
     channels = ChannelAccount.query.filter_by(account_id=aid).all()
+
+    # Filter UI: dropdown options + currently-selected display values
+    categories_tree = _build_category_tree(aid)
+    all_brands = Brand.query.filter_by(account_id=aid).order_by(Brand.name).all()
+    selected_category = (
+        Category.query.filter_by(id=category_id, account_id=aid).first()
+        if category_id else None
+    )
+    selected_brands = (
+        Brand.query.filter(Brand.account_id == aid, Brand.id.in_(brand_ids)).all()
+        if brand_ids else []
+    )
+
     return render_template(
         "catalogue/index.html",
         pagination=pagination,
         products=pagination.items,
-        q=q,
-        status=status,
+        q=q, status=status,
+        category_id=category_id, brand_ids=brand_ids, ptype=ptype, stock=stock,
+        categories_tree=categories_tree, all_brands=all_brands,
+        selected_category=selected_category, selected_brands=selected_brands,
         channels=channels,
         total_products=total_products,
         total_inventory=int(total_inventory),
         PRODUCT_STATUSES=PRODUCT_STATUSES,
+        PRODUCT_TYPES=PRODUCT_TYPES,
+        STOCK_STATUSES=STOCK_STATUSES,
     )
+
+
+def _csv_ints(value: str) -> list[int]:
+    out: list[int] = []
+    for chunk in (value or "").split(","):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        try:
+            out.append(int(chunk))
+        except ValueError:
+            pass
+    return out
+
+
+def _walk_descendants(account_id: int, root_id: int) -> list[int]:
+    """BFS over Category.parent_id to collect root + all descendant ids.
+    Cheap on typical 3–4-level hierarchies; revisit with a recursive CTE if
+    anyone has a 1000-deep tree.
+    """
+    rows = (db.session.query(Category.id, Category.parent_id)
+            .filter_by(account_id=account_id).all())
+    children_by_parent: dict[int, list[int]] = {}
+    for cid, pid in rows:
+        if pid is not None:
+            children_by_parent.setdefault(pid, []).append(cid)
+    out: list[int] = []
+    queue = [root_id]
+    seen: set[int] = set()
+    while queue:
+        cur = queue.pop(0)
+        if cur in seen:
+            continue
+        seen.add(cur)
+        out.append(cur)
+        queue.extend(children_by_parent.get(cur, []))
+    return out
+
+
+def _build_category_tree(account_id: int) -> list[dict]:
+    """Flatten the category tree into [(category, depth)] for indented
+    rendering in a <select>. Depth-first, alphabetical within each level."""
+    rows = (Category.query.filter_by(account_id=account_id)
+            .order_by(Category.name).all())
+    by_parent: dict[int | None, list[Category]] = {}
+    for c in rows:
+        by_parent.setdefault(c.parent_id, []).append(c)
+
+    flat: list[dict] = []
+    def walk(parent_id, depth):
+        for c in by_parent.get(parent_id, []):
+            flat.append({"category": c, "depth": depth})
+            walk(c.id, depth + 1)
+    walk(None, 0)
+    return flat
 
 
 @bp.route("/new", methods=["GET", "POST"])

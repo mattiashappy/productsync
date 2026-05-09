@@ -2,10 +2,30 @@
 {% block title %}Products — ProductSync{% endblock %}
 {% block content %}
 
-{# Helper macro: rebuild the current querystring with overrides for pagination links #}
+{# Helper macros: rebuild the current querystring while preserving / overriding filters.
+   page_url(N)            → same filters, jumps to page N
+   filter_url(**overrides)→ same filters with values replaced (None drops the param) #}
 {% macro page_url(target_page) -%}
-  {{ url_for('catalogue.index', q=q or none, status=status or none, page=target_page) }}
+  {{ url_for('catalogue.index',
+             q=q or none, status=status or none,
+             category=category_id or none,
+             brand=(brand_ids|join(','))|default(none, true),
+             type=ptype or none, stock=stock or none,
+             page=target_page) }}
 {%- endmacro %}
+
+{% macro filter_url(remove_category=false, remove_brand_id=none, remove_type=false, remove_stock=false, remove_status=false, remove_q=false) -%}
+  {%- set _brands = brand_ids | reject('equalto', remove_brand_id) | list if remove_brand_id is not none else brand_ids -%}
+  {{ url_for('catalogue.index',
+             q=none if remove_q else (q or none),
+             status=none if remove_status else (status or none),
+             category=none if remove_category else (category_id or none),
+             brand=(_brands|join(','))|default(none, true),
+             type=none if remove_type else (ptype or none),
+             stock=none if remove_stock else (stock or none)) }}
+{%- endmacro %}
+
+{% set has_active_filter = (q or status or category_id or brand_ids or ptype or stock) %}
 
 <section class="bg-gray-50 py-3 sm:py-5">
   <div class="mx-auto">
@@ -34,9 +54,10 @@
         </div>
       </div>
 
-      <!-- Search + status filter row -->
-      <div class="flex flex-col px-4 py-3 space-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:space-x-4 border-t border-gray-200">
-        <form method="GET" class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+      <!-- Filter rows (search + WC-style facets) -->
+      <form method="GET" class="px-4 py-3 space-y-3 border-t border-gray-200">
+        <!-- Row 1: search + status (existing) -->
+        <div class="flex flex-col sm:flex-row gap-3">
           <div class="relative w-full sm:w-72">
             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
@@ -51,16 +72,111 @@
               <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s|capitalize }}</option>
             {% endfor %}
           </select>
-          <button type="submit"
-                  class="text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-2">
-            Filter
-          </button>
-          {% if q or status %}
-            <a href="{{ url_for('catalogue.index') }}"
-               class="text-sm text-gray-500 hover:text-gray-900 self-center">Clear</a>
+        </div>
+
+        <!-- Row 2: WC-style filters (category, brand, type, stock) -->
+        <div class="flex flex-col sm:flex-row flex-wrap gap-3">
+          <!-- Category — hierarchical, indented options (— prefix per depth) -->
+          <select name="category"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 min-w-[12rem]">
+            <option value="">All categories</option>
+            {% for node in categories_tree %}
+              <option value="{{ node.category.id }}" {% if category_id == node.category.id %}selected{% endif %}>
+                {{ ('— ' * node.depth) }}{{ node.category.name }}
+              </option>
+            {% endfor %}
+          </select>
+
+          <!-- Brand — multi-select (size=4 keyboard-friendly; Cmd/Ctrl+click for multi) -->
+          {% if all_brands %}
+          <select name="brand" multiple size="1"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 min-w-[10rem]"
+                  title="Hold Ctrl/Cmd to select multiple brands">
+            {% for b in all_brands %}
+              <option value="{{ b.id }}" {% if b.id in brand_ids %}selected{% endif %}>{{ b.name }}</option>
+            {% endfor %}
+          </select>
+          {% else %}
+          <select disabled
+                  class="bg-gray-100 border border-gray-200 text-gray-400 text-sm rounded-lg p-2 min-w-[10rem]">
+            <option>No brands yet</option>
+          </select>
           {% endif %}
-        </form>
-      </div>
+
+          <!-- Product type -->
+          <select name="type"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 min-w-[10rem]">
+            <option value="">Any type</option>
+            {% for t in PRODUCT_TYPES %}
+              <option value="{{ t }}" {% if t == ptype %}selected{% endif %}>{{ t|capitalize }}</option>
+            {% endfor %}
+          </select>
+
+          <!-- Stock status -->
+          <select name="stock"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2 min-w-[10rem]">
+            <option value="">Any stock</option>
+            <option value="in_stock"     {% if stock == 'in_stock' %}selected{% endif %}>In stock</option>
+            <option value="low_stock"    {% if stock == 'low_stock' %}selected{% endif %}>Low stock</option>
+            <option value="out_of_stock" {% if stock == 'out_of_stock' %}selected{% endif %}>Out of stock</option>
+          </select>
+
+          <button type="submit"
+                  class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2">
+            Apply filters
+          </button>
+          {% if has_active_filter %}
+            <a href="{{ url_for('catalogue.index') }}"
+               class="text-sm text-gray-500 hover:text-gray-900 self-center">Clear all</a>
+          {% endif %}
+        </div>
+
+        <!-- Active-filter chips (each ✕ removes just that one filter) -->
+        {% if has_active_filter %}
+        <div class="flex flex-wrap gap-2 pt-1">
+          {% if q %}
+            <a href="{{ filter_url(remove_q=true) }}"
+               class="inline-flex items-center gap-1.5 bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-1 rounded-full hover:bg-gray-200">
+              Search: <span class="font-semibold">{{ q }}</span> <span class="text-gray-500">✕</span>
+            </a>
+          {% endif %}
+          {% if status %}
+            <a href="{{ filter_url(remove_status=true) }}"
+               class="inline-flex items-center gap-1.5 bg-yellow-50 text-yellow-800 text-xs font-medium px-2.5 py-1 rounded-full hover:bg-yellow-100">
+              Status: <span class="font-semibold capitalize">{{ status }}</span> <span class="text-yellow-700">✕</span>
+            </a>
+          {% endif %}
+          {% if selected_category %}
+            <a href="{{ filter_url(remove_category=true) }}"
+               class="inline-flex items-center gap-1.5 bg-primary-50 text-primary-800 text-xs font-medium px-2.5 py-1 rounded-full hover:bg-primary-100">
+              Category: <span class="font-semibold">{{ selected_category.name }}</span> <span class="text-primary-700">✕</span>
+            </a>
+          {% endif %}
+          {% for b in selected_brands %}
+            <a href="{{ filter_url(remove_brand_id=b.id) }}"
+               class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full hover:bg-amber-100">
+              Brand: <span class="font-semibold">{{ b.name }}</span> <span class="text-amber-700">✕</span>
+            </a>
+          {% endfor %}
+          {% if ptype %}
+            <a href="{{ filter_url(remove_type=true) }}"
+               class="inline-flex items-center gap-1.5 bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-1 rounded-full hover:bg-gray-200">
+              Type: <span class="font-semibold capitalize">{{ ptype }}</span> <span class="text-gray-500">✕</span>
+            </a>
+          {% endif %}
+          {% if stock %}
+            <a href="{{ filter_url(remove_stock=true) }}"
+               class="inline-flex items-center gap-1.5
+               {% if stock == 'out_of_stock' %}bg-red-50 text-red-800 hover:bg-red-100
+               {% elif stock == 'low_stock' %}bg-yellow-50 text-yellow-800 hover:bg-yellow-100
+               {% else %}bg-green-50 text-green-800 hover:bg-green-100{% endif %}
+               text-xs font-medium px-2.5 py-1 rounded-full">
+              Stock: <span class="font-semibold">{{ stock.replace('_', ' ')|capitalize }}</span> <span>✕</span>
+            </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </form>
 
       <!-- Table -->
       <div class="overflow-x-auto">
@@ -138,19 +254,49 @@
                 </td>
                 <td class="px-4 py-2">
                   {% if channels %}
-                    {% for c in channels %}
-                      {% if c.id in linked_ids %}
-                        <span title="{{ c.display_name }} — linked"
-                              class="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded mr-1 capitalize">
-                          ✓ {{ c.channel[:4] }}
-                        </span>
-                      {% else %}
-                        <span title="{{ c.display_name }} — not pushed"
-                              class="inline-flex items-center bg-gray-100 text-gray-500 text-xs font-medium px-2 py-0.5 rounded mr-1 capitalize">
-                          {{ c.channel[:4] }}
-                        </span>
+                    {% set unlinked_channels = channels | rejectattr('id', 'in', linked_ids) | list %}
+                    <div class="flex items-center gap-1 flex-wrap">
+                      {# Status chips for every connected channel #}
+                      {% for c in channels %}
+                        {% if c.id in linked_ids %}
+                          <span title="{{ c.display_name }} — linked"
+                                class="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded capitalize">
+                            ✓ {{ c.channel[:4] }}
+                          </span>
+                        {% else %}
+                          <span title="{{ c.display_name }} — not pushed"
+                                class="inline-flex items-center bg-gray-100 text-gray-500 text-xs font-medium px-2 py-0.5 rounded capitalize">
+                            {{ c.channel[:4] }}
+                          </span>
+                        {% endif %}
+                      {% endfor %}
+
+                      {# 'Push to…' menu for the unlinked channels — surfaces the existing per-product push from the list #}
+                      {% if unlinked_channels %}
+                        <button id="push-menu-btn-{{ p.id }}" data-dropdown-toggle="push-menu-{{ p.id }}"
+                                type="button"
+                                class="ml-1 inline-flex items-center justify-center w-6 h-6 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded"
+                                title="Push to a connected channel">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 3" aria-hidden="true"><circle cx="2" cy="1.5" r="1.5"/><circle cx="8" cy="1.5" r="1.5"/><circle cx="14" cy="1.5" r="1.5"/></svg>
+                        </button>
+                        <div id="push-menu-{{ p.id }}" class="hidden z-50 bg-white rounded-lg shadow border border-gray-200 w-56">
+                          <p class="px-3 py-2 text-[10px] uppercase tracking-wide text-gray-500 border-b border-gray-100">Publish to</p>
+                          <ul class="py-1 text-sm text-gray-700">
+                            {% for c in unlinked_channels %}
+                              <li>
+                                <form method="POST" action="{{ url_for('catalogue.push', product_id=p.id, channel_account_id=c.id) }}">
+                                  <button type="submit" class="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-gray-100">
+                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-primary-50 text-primary-700 text-[10px] font-bold uppercase">{{ c.channel[0] }}</span>
+                                    <span class="flex-1 truncate">{{ c.display_name }}</span>
+                                    <svg class="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1 0 1.414l-6 6a1 1 0 0 1-1.414-1.414L14.586 11H3a1 1 0 1 1 0-2h11.586l-4.293-4.293a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"/></svg>
+                                  </button>
+                                </form>
+                              </li>
+                            {% endfor %}
+                          </ul>
+                        </div>
                       {% endif %}
-                    {% endfor %}
+                    </div>
                   {% else %}
                     <span class="text-xs text-gray-400">no channels</span>
                   {% endif %}
