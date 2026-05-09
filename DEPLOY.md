@@ -14,18 +14,29 @@ Three environments, three Heroku apps, one git repo with three remotes:
 
 ## One-time setup (do this once on your laptop)
 
-### 1. Make `productsync/` its own git repo
+### 1. Git repo
 
-The Heroku build expects `requirements.txt` at the repo root. Right now `productsync/` lives inside the larger workspace, so initialise it as its own repo:
+ProductSync lives at <https://github.com/mattiashappy/productsync> — that's the canonical source. Heroku apps are deployed from local pushes via per-stage remotes (set up by the script in step 3). The flow looks like:
 
-```bash
-cd productsync
-git init -b main
-git add .
-git commit -m "Initial ProductSync commit"
+```
+local main ── push ──► origin (GitHub)        # canonical history, backup, PRs
+            └─ push ─► heroku-test            # auto-deploys to test
+            └─ push ─► heroku-staging         # auto-deploys to staging
+            └─ push ─► heroku-prod            # auto-deploys to production
 ```
 
-(Optional but recommended: also push to a private GitHub repo so you have an off-laptop backup. `gh repo create productsync --private --source=. --push`.)
+If you're starting on a fresh laptop:
+
+```bash
+git clone https://github.com/mattiashappy/productsync.git
+cd productsync
+```
+
+If git's TLS handshake fails with "unable to get local issuer certificate" (corporate AV / Avast / Zscaler intercepting HTTPS), switch git to use the OS certificate store:
+
+```bash
+git config --global http.sslBackend schannel   # Windows
+```
 
 ### 2. Install + log into the Heroku CLI
 
