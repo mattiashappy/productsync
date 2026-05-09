@@ -13,9 +13,15 @@
     <div class="p-5 flex-1">
       <div class="flex items-start justify-between mb-3">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold {{ addon.color_bg }} {{ addon.color_text }}">
-            {{ addon.icon_letter }}
-          </div>
+          {% if addon.logo %}
+            <div class="w-10 h-10 rounded-lg bg-white border border-gray-100 flex items-center justify-center p-1.5">
+              <img src="{{ url_for('static', filename=addon.logo) }}" alt="{{ addon.name }}" class="max-h-7 max-w-full" />
+            </div>
+          {% else %}
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold {{ addon.color_bg }} {{ addon.color_text }}">
+              {{ addon.icon_letter }}
+            </div>
+          {% endif %}
           <div>
             <h2 class="text-base font-semibold text-gray-900">{{ addon.name }}</h2>
             <p class="text-xs text-gray-500">{{ addon.category }}</p>

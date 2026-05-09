@@ -9,9 +9,19 @@
     All addons
   </a>
   <div class="flex items-start gap-4">
-    <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl font-bold {{ addon.color_bg }} {{ addon.color_text }}">
-      {{ addon.icon_letter }}
-    </div>
+    {% if addon.logo_wordmark %}
+      <div class="h-12 flex items-center bg-white border border-gray-100 rounded-lg px-3">
+        <img src="{{ url_for('static', filename=addon.logo_wordmark) }}" alt="{{ addon.name }}" class="h-7 w-auto" />
+      </div>
+    {% elif addon.logo %}
+      <div class="w-12 h-12 rounded-lg bg-white border border-gray-100 flex items-center justify-center p-2">
+        <img src="{{ url_for('static', filename=addon.logo) }}" alt="{{ addon.name }}" class="max-h-9 max-w-full" />
+      </div>
+    {% else %}
+      <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl font-bold {{ addon.color_bg }} {{ addon.color_text }}">
+        {{ addon.icon_letter }}
+      </div>
+    {% endif %}
     <div class="flex-1">
       <h1 class="text-2xl font-bold text-gray-900">{{ addon.name }}</h1>
       <p class="text-sm text-gray-500 mt-0.5">{{ addon.tagline }}</p>
@@ -47,9 +57,15 @@
       <li class="px-5 py-4">
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-3 min-w-0">
-            <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0 {{ addon.color_bg }} {{ addon.color_text }}">
-              {{ addon.icon_letter }}
-            </span>
+            {% if addon.logo %}
+              <span class="w-9 h-9 rounded-lg bg-white border border-gray-100 flex items-center justify-center p-1 shrink-0">
+                <img src="{{ url_for('static', filename=addon.logo) }}" alt="{{ addon.name }}" class="max-h-6 max-w-full" />
+              </span>
+            {% else %}
+              <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0 {{ addon.color_bg }} {{ addon.color_text }}">
+                {{ addon.icon_letter }}
+              </span>
+            {% endif %}
             <div class="min-w-0">
               <p class="text-sm font-medium text-gray-900 truncate">{{ s.display_name }}</p>
               <p class="text-xs text-gray-500 truncate">{{ s.base_url }}</p>

@@ -42,6 +42,9 @@ ADDONS: dict[str, dict] = {
         ),
         "fields": ["base_url", "api_key", "api_secret"],
         "status": "available",
+        # Logo path under static/. If None, the templates fall back to the
+        # icon_letter chip (used by addons that ship without a brand asset).
+        "logo": "img/woo-logo.svg",
         "icon_letter": "W",
         "color_bg": "bg-purple-100",
         "color_text": "text-purple-700",
@@ -63,6 +66,10 @@ ADDONS: dict[str, dict] = {
         ),
         "fields": ["base_url", "api_key", "webhook_secret"],
         "status": "available",
+        # Compact glyph (shopping-bag) for catalogue tiles; templates upgrade
+        # to the full wordmark on the detail page header.
+        "logo": "img/shopify-glyph.svg",
+        "logo_wordmark": "img/shopify-logo.svg",
         "icon_letter": "S",
         "color_bg": "bg-emerald-100",
         "color_text": "text-emerald-700",
@@ -81,6 +88,7 @@ ADDONS: dict[str, dict] = {
         "credential_help": "",
         "fields": [],
         "status": "coming_soon",
+        "logo": None,  # falls back to icon_letter chip
         "icon_letter": "B",
         "color_bg": "bg-amber-100",
         "color_text": "text-amber-700",
