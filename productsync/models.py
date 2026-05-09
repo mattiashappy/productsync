@@ -36,6 +36,12 @@ product_brand = db.Table(
     db.Column("brand_id", db.Integer, db.ForeignKey("brand.id"), primary_key=True),
 )
 
+product_tag = db.Table(
+    "product_tag",
+    db.Column("product_id", db.Integer, db.ForeignKey("product.id"), primary_key=True),
+    db.Column("tag_id", db.Integer, db.ForeignKey("tag.id"), primary_key=True),
+)
+
 
 class Account(db.Model):
     __tablename__ = "account"
@@ -92,8 +98,20 @@ class Product(db.Model):
     compare_at_price = db.Column(db.Numeric(10, 2))
     currency = db.Column(db.String(3), nullable=False, default="SEK")
     weight_grams = db.Column(db.Integer)
+    length_mm = db.Column(db.Integer)
+    width_mm = db.Column(db.Integer)
+    height_mm = db.Column(db.Integer)
     requires_shipping = db.Column(db.Boolean, nullable=False, default=True)
     tax_class = db.Column(db.String(60))
+    # Marketing fields (promoted to first-class for cross-platform parity)
+    vendor = db.Column(db.String(120))           # Shopify-style single brand string; WC: first brand on import
+    slug = db.Column(db.String(255))             # URL handle / WC slug / Shopify handle
+    short_description = db.Column(db.Text)       # WC short_description; sometimes a Shopify metafield
+    featured = db.Column(db.Boolean, nullable=False, default=False)
+    # Sale window
+    sale_price = db.Column(db.Numeric(10, 2))
+    sale_starts_at = db.Column(db.DateTime)
+    sale_ends_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     last_pushed_at = db.Column(db.DateTime)
@@ -116,6 +134,10 @@ class Product(db.Model):
     )
     brands = db.relationship(
         "Brand", secondary=product_brand,
+        backref=db.backref("products", lazy="dynamic"), lazy="selectin",
+    )
+    tags = db.relationship(
+        "Tag", secondary=product_tag,
         backref=db.backref("products", lazy="dynamic"), lazy="selectin",
     )
 
@@ -213,6 +235,11 @@ class ChannelLink(db.Model):
     last_pushed_at = db.Column(db.DateTime)
     last_pulled_at = db.Column(db.DateTime)
     remote_version = db.Column(db.String(120))  # etag, updated_at, whatever the platform gives us
+    # The full remote payload as last imported / pushed. The base for the next
+    # outbound merge — fields we don't model are preserved verbatim across
+    # round-trips. Keeps WC's `meta_data`, `attributes`, `cross_sell_ids`,
+    # plugin-added fields, etc. from getting blanked.
+    raw_remote_data = db.Column(JsonType)
 
     channel_account = db.relationship("ChannelAccount", lazy="joined")
 
@@ -326,4 +353,22 @@ class Brand(db.Model):
     __table_args__ = (
         db.UniqueConstraint("account_id", "remote_source", "remote_id",
                             name="uq_brand_account_remote"),
+    )
+
+
+class Tag(db.Model):
+    """Flat product tag. WC has product_tags as a taxonomy; Shopify uses CSV
+    string. Account-scoped, imported via remote_id from WC."""
+    __tablename__ = "tag"
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("account.id"), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    slug = db.Column(db.String(200))
+    remote_id = db.Column(db.String(120))                               # WC tag id
+    remote_source = db.Column(db.String(40))                            # 'woocommerce'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "remote_source", "remote_id",
+                            name="uq_tag_account_remote"),
     )

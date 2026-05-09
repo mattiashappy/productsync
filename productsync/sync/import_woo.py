@@ -21,7 +21,7 @@ from ..channels.woocommerce import WooCommerceChannel
 from ..extensions import db
 from ..models import (
     Brand, Category, ChannelAccount, ChannelLink, Product, ProductImage,
-    ProductVariant, SyncJob,
+    ProductVariant, SyncJob, Tag,
 )
 
 
@@ -139,6 +139,13 @@ def _run(channel_account_id: int, max_pages: int, job: SyncJob | None) -> tuple[
         db.session.commit()
     brand_map = _upsert_brands(account, adapter)
 
+    if job is not None:
+        job.payload = _payload(processed=0, total=None,
+                               message="Importing tags…",
+                               errors=[], finished=False)
+        db.session.commit()
+    tag_map = _upsert_tags(account, adapter)
+
     page = 1
 
     # ── Phase B: pull + import products. Each product is now linked to local
@@ -159,7 +166,8 @@ def _run(channel_account_id: int, max_pages: int, job: SyncJob | None) -> tuple[
     while products:
         for wc_product in products:
             try:
-                _import_one(account, adapter, wc_product, result, category_map, brand_map)
+                _import_one(account, adapter, wc_product, result,
+                            category_map, brand_map, tag_map)
             except Exception as exc:  # noqa: BLE001
                 db.session.rollback()
                 result.failed += 1
@@ -224,6 +232,7 @@ def _import_one(
     result: ImportResult,
     category_map: dict[str, Category] | None = None,
     brand_map: dict[str, Brand] | None = None,
+    tag_map: dict[str, Tag] | None = None,
 ) -> None:
     remote_id = str(wc_product.get("id"))
     title = wc_product.get("name") or "(untitled)"
@@ -251,6 +260,9 @@ def _import_one(
     if existing_link is not None:
         existing_link.last_pulled_at = datetime.utcnow()
         existing_link.remote_version = str(wc_product.get("date_modified_gmt") or "")
+        # Refresh raw_remote_data so future pushes round-trip preserve the
+        # latest WC state (in case fields changed in WP-admin since last pull).
+        existing_link.raw_remote_data = wc_product
         result.linked_existing += 1
         return
 
@@ -262,15 +274,27 @@ def _import_one(
     )
     is_new = product is None
     if is_new:
+        # Pull dimensions out of the WC nested dict (cm string → mm int).
+        wc_dims = wc_product.get("dimensions") or {}
         product = Product(
             account_id=account.account_id,
             sku=sku,
             title=title,
-            description=wc_product.get("description") or wc_product.get("short_description") or None,
+            description=wc_product.get("description") or None,
+            short_description=wc_product.get("short_description") or None,
             status="active" if wc_product.get("status") == "publish" else "draft",
             price=_dec(wc_product.get("regular_price") or wc_product.get("price")),
             compare_at_price=_dec(wc_product.get("regular_price") if wc_product.get("sale_price") else None),
+            sale_price=_dec(wc_product.get("sale_price")),
+            sale_starts_at=_parse_iso(wc_product.get("date_on_sale_from_gmt")),
+            sale_ends_at=_parse_iso(wc_product.get("date_on_sale_to_gmt")),
+            slug=wc_product.get("slug") or None,
+            featured=bool(wc_product.get("featured", False)),
             currency="SEK",
+            weight_grams=_cm_to_mm(wc_product.get("weight"), unit_factor=1000),    # WC weight is kg
+            length_mm=_cm_to_mm(wc_dims.get("length")),
+            width_mm=_cm_to_mm(wc_dims.get("width")),
+            height_mm=_cm_to_mm(wc_dims.get("height")),
             requires_shipping=not wc_product.get("virtual", False),
         )
         db.session.add(product)
@@ -319,6 +343,17 @@ def _import_one(
             local = brand_map.get(str(brand_ref.get("id")))
             if local is not None and local.id not in existing_brand_ids:
                 product.brands.append(local)
+    if tag_map:
+        existing_tag_ids = {t.id for t in product.tags}
+        for tag_ref in (wc_product.get("tags") or []):
+            local = tag_map.get(str(tag_ref.get("id")))
+            if local is not None and local.id not in existing_tag_ids:
+                product.tags.append(local)
+
+    # On a fresh import, also default vendor to the first brand name when
+    # not already set (Shopify-side wants vendor as a single string).
+    if not product.vendor and product.brands:
+        product.vendor = product.brands[0].name
 
     db.session.add(
         ChannelLink(
@@ -328,6 +363,9 @@ def _import_one(
             remote_sku=sku,
             last_pulled_at=datetime.utcnow(),
             remote_version=str(wc_product.get("date_modified_gmt") or ""),
+            # The full WC payload — base for the next push so unmodelled
+            # fields (meta_data, attributes, etc) round-trip without loss.
+            raw_remote_data=wc_product,
         )
     )
 
@@ -472,3 +510,57 @@ def _upsert_brands(account: ChannelAccount, adapter: WooCommerceChannel) -> dict
         by_remote[rid] = brand
     db.session.commit()
     return by_remote
+
+
+def _upsert_tags(account: ChannelAccount, adapter: WooCommerceChannel) -> dict[str, Tag]:
+    """Pull WC tags and upsert local Tag rows. Returns map of remote_id → Tag."""
+    try:
+        wc_tags = adapter.pull_all_tags()
+    except ChannelError:
+        return {}
+
+    by_remote: dict[str, Tag] = {}
+    for wc in wc_tags:
+        rid = str(wc.get("id"))
+        tag = (
+            db.session.query(Tag)
+            .filter_by(account_id=account.account_id, remote_source="woocommerce", remote_id=rid)
+            .first()
+        )
+        if tag is None:
+            tag = Tag(
+                account_id=account.account_id,
+                remote_source="woocommerce",
+                remote_id=rid,
+                name=wc.get("name") or "(unnamed)",
+                slug=wc.get("slug") or None,
+            )
+            db.session.add(tag)
+        else:
+            tag.name = wc.get("name") or tag.name
+            tag.slug = wc.get("slug") or tag.slug
+        by_remote[rid] = tag
+    db.session.commit()
+    return by_remote
+
+
+def _parse_iso(value: Any) -> "datetime | None":
+    """Parse a WC date string ('2024-12-31T00:00:00') into a datetime. None on bad input."""
+    if not value:
+        return None
+    s = str(value).rstrip("Z")
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        return None
+
+
+def _cm_to_mm(value: Any, unit_factor: int = 10) -> int | None:
+    """Convert a WC dimension string ('30' cm) to mm (300). For weight pass
+    unit_factor=1000 (kg → g). Returns None for blank/invalid input."""
+    if value is None or value == "":
+        return None
+    try:
+        return int(round(float(value) * unit_factor))
+    except (ValueError, TypeError):
+        return None

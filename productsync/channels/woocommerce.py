@@ -38,7 +38,17 @@ class WooCommerceChannel(Channel):
 
     # ── Push ────────────────────────────────────────────────────────────────
     def push_product(self, product: Product, link: ChannelLink | None) -> ChannelLink:
-        body = self._serialize_product(product)
+        # Round-trip preservation: start from the last-known remote payload,
+        # overlay our managed fields on top. Anything WC has that we don't
+        # model (meta_data, attributes, cross_sell_ids, plugin custom fields…)
+        # rides through untouched.
+        base = (link.raw_remote_data or {}) if link is not None else {}
+        delta = self._serialize_product(product)
+        body = {**base, **delta}
+        # `id` from a base payload would collide with PUT — strip it. WC infers
+        # the id from the URL on PUT and assigns one on POST.
+        body.pop("id", None)
+
         with self._client() as client:
             if link and link.remote_product_id:
                 resp = client.put(f"/products/{link.remote_product_id}", json=body)
@@ -58,6 +68,8 @@ class WooCommerceChannel(Channel):
         link.remote_sku = data.get("sku") or product.sku
         link.last_pushed_at = datetime.utcnow()
         link.remote_version = str(data.get("date_modified_gmt") or data.get("date_modified") or "")
+        # Capture WC's authoritative copy as the new base for the NEXT push.
+        link.raw_remote_data = data
         return link
 
     def push_inventory(self, link: ChannelLink, quantity: int) -> None:
@@ -173,6 +185,10 @@ class WooCommerceChannel(Channel):
             current_app.logger.info("WC brands taxonomy unavailable on this store (probably WC < 9.0): %s", exc)
             return []
 
+    def pull_all_tags(self) -> list[dict[str, Any]]:
+        """Paginate through every product tag in the WC store."""
+        return self._paginate_all("/products/tags")
+
     def _paginate_all(self, path: str, per_page: int = 100, max_pages: int = 50) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         with self._client() as client:
@@ -222,20 +238,72 @@ class WooCommerceChannel(Channel):
 
     # ── Helpers ─────────────────────────────────────────────────────────────
     def _serialize_product(self, product: Product) -> dict[str, Any]:
+        """Build the WC payload from the fields we model. Caller merges this
+        on top of `raw_remote_data` so unmodelled WC fields are preserved.
+        Only include keys we actually own — everything else stays whatever
+        WC currently has.
+        """
         variants = product.variants
         first = variants[0] if variants else None
         body: dict[str, Any] = {
             "name": product.title,
             "sku": product.sku,
             "description": product.description or "",
+            "short_description": product.short_description or "",
             "status": "publish" if product.status == "active" else "draft",
             "regular_price": str(product.price) if product.price is not None else "",
             "manage_stock": True,
+            "featured": bool(product.featured),
             "images": [{"src": img.url, "alt": img.alt or ""} for img in product.images],
         }
-        if product.compare_at_price is not None:
-            body["sale_price"] = str(product.price)
+        if product.slug:
+            body["slug"] = product.slug
+
+        # Sale price + window. Only set if we have one — otherwise leave
+        # whatever's in raw_remote_data alone (the merge will keep it).
+        if product.sale_price is not None:
+            body["sale_price"] = str(product.sale_price)
+        if product.sale_starts_at is not None:
+            body["date_on_sale_from_gmt"] = product.sale_starts_at.isoformat()
+        if product.sale_ends_at is not None:
+            body["date_on_sale_to_gmt"] = product.sale_ends_at.isoformat()
+
+        # If there's a compare_at_price set explicitly, use the WC convention:
+        # regular_price is the "was" price, sale_price is the live discounted price.
+        if product.compare_at_price is not None and product.sale_price is None:
+            body["sale_price"] = str(product.price) if product.price is not None else ""
             body["regular_price"] = str(product.compare_at_price)
+
+        # Dimensions: WC stores as cm strings; we keep mm. Convert mm → cm.
+        dims: dict[str, str] = {}
+        if product.length_mm is not None:
+            dims["length"] = f"{product.length_mm / 10:g}"
+        if product.width_mm is not None:
+            dims["width"] = f"{product.width_mm / 10:g}"
+        if product.height_mm is not None:
+            dims["height"] = f"{product.height_mm / 10:g}"
+        if dims:
+            body["dimensions"] = dims
+        if product.weight_grams is not None:
+            body["weight"] = f"{product.weight_grams / 1000:g}"
+
+        # Categories, tags, brands — when set on our side, send. Otherwise
+        # let raw_remote_data preserve whatever WC has (the merge handles this).
+        if product.categories:
+            body["categories"] = [
+                {"id": int(c.remote_id)} for c in product.categories
+                if c.remote_source == "woocommerce" and c.remote_id and c.remote_id.isdigit()
+            ]
+        if product.tags:
+            body["tags"] = [
+                {"id": int(t.remote_id)} for t in product.tags
+                if t.remote_source == "woocommerce" and t.remote_id and t.remote_id.isdigit()
+            ]
+        if product.brands:
+            body["brands"] = [
+                {"id": int(b.remote_id)} for b in product.brands
+                if b.remote_source == "woocommerce" and b.remote_id and b.remote_id.isdigit()
+            ]
 
         if len(variants) > 1:
             body["type"] = "variable"

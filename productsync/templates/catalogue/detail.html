@@ -35,54 +35,139 @@
   <!-- Main column -->
   <div class="lg:col-span-2 space-y-6">
 
-    <!-- Details card -->
+    {% set input_class = "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" %}
+
+    <!-- Details card (sectioned form) -->
     <form method="POST" action="{{ url_for('catalogue.edit', product_id=product.id) }}"
-          class="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div class="px-5 py-3 border-b border-gray-100">
-        <h2 class="text-sm font-semibold text-gray-700">Details</h2>
-      </div>
+          class="bg-white border border-gray-200 rounded-lg shadow-sm divide-y divide-gray-100">
+
+      <!-- Section: Basics -->
       <div class="p-5 space-y-4">
+        <h2 class="text-sm font-semibold text-gray-700">Basics</h2>
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block mb-1.5 text-xs font-medium text-gray-700">Title</label>
-            <input type="text" name="title" value="{{ product.title }}" required
-                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            <input type="text" name="title" value="{{ product.title }}" required class="{{ input_class }}" />
           </div>
           <div>
             <label class="block mb-1.5 text-xs font-medium text-gray-700">SKU</label>
-            <input type="text" name="sku" value="{{ product.sku }}" required
-                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm font-mono rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            <input type="text" name="sku" value="{{ product.sku }}" required class="{{ input_class }} font-mono" />
           </div>
           <div>
             <label class="block mb-1.5 text-xs font-medium text-gray-700">Price</label>
-            <input type="number" step="0.01" name="price" value="{{ product.price if product.price is not none else '' }}"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            <input type="number" step="0.01" name="price" value="{{ product.price if product.price is not none else '' }}" class="{{ input_class }}" />
           </div>
           <div>
             <label class="block mb-1.5 text-xs font-medium text-gray-700">Compare at</label>
-            <input type="number" step="0.01" name="compare_at_price" value="{{ product.compare_at_price if product.compare_at_price is not none else '' }}"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            <input type="number" step="0.01" name="compare_at_price" value="{{ product.compare_at_price if product.compare_at_price is not none else '' }}" class="{{ input_class }}" />
           </div>
           <div>
             <label class="block mb-1.5 text-xs font-medium text-gray-700">Currency</label>
-            <input type="text" name="currency" value="{{ product.currency }}" maxlength="3"
-                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5" />
+            <input type="text" name="currency" value="{{ product.currency }}" maxlength="3" class="{{ input_class }}" />
           </div>
           <div>
             <label class="block mb-1.5 text-xs font-medium text-gray-700">Status</label>
-            <select name="status"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
+            <select name="status" class="{{ input_class }}">
               {% for s in PRODUCT_STATUSES %}<option value="{{ s }}" {% if s == product.status %}selected{% endif %}>{{ s }}</option>{% endfor %}
             </select>
           </div>
         </div>
         <div>
           <label class="block mb-1.5 text-xs font-medium text-gray-700">Description</label>
-          <textarea name="description" rows="6"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">{{ product.description or '' }}</textarea>
+          <textarea name="description" rows="6" class="{{ input_class }}">{{ product.description or '' }}</textarea>
         </div>
       </div>
-      <div class="px-5 py-3 border-t border-gray-100 flex justify-end">
+
+      <!-- Section: Marketing -->
+      <div class="p-5 space-y-4">
+        <h2 class="text-sm font-semibold text-gray-700">Marketing</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">
+              Vendor <span class="text-gray-400 font-normal">(Shopify-style brand string)</span>
+            </label>
+            <input type="text" name="vendor" value="{{ product.vendor or '' }}" class="{{ input_class }}" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">
+              URL slug <span class="text-gray-400 font-normal">(WC slug / Shopify handle)</span>
+            </label>
+            <input type="text" name="slug" value="{{ product.slug or '' }}" class="{{ input_class }} font-mono" />
+          </div>
+        </div>
+        <div>
+          <label class="block mb-1.5 text-xs font-medium text-gray-700">Short description</label>
+          <textarea name="short_description" rows="3" class="{{ input_class }}">{{ product.short_description or '' }}</textarea>
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" name="featured" id="featured" value="1" {% if product.featured %}checked{% endif %}
+                 class="w-4 h-4 border-gray-300 rounded text-primary-600 focus:ring-primary-500" />
+          <label for="featured" class="text-sm text-gray-700 select-none">
+            Featured product
+            <span class="text-gray-400 font-normal text-xs">— often surfaced on storefront homepages</span>
+          </label>
+        </div>
+        {% if product.tags %}
+        <div>
+          <p class="block mb-1.5 text-xs font-medium text-gray-700">Tags</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% for t in product.tags %}
+              <span class="inline-flex items-center bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full">{{ t.name }}</span>
+            {% endfor %}
+          </div>
+          <p class="mt-1.5 text-xs text-gray-400">Tags are imported from your store; editing them in ProductSync is coming soon.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Section: Sale -->
+      <div class="p-5 space-y-4">
+        <h2 class="text-sm font-semibold text-gray-700">Sale</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Sale price</label>
+            <input type="number" step="0.01" name="sale_price" value="{{ product.sale_price if product.sale_price is not none else '' }}" class="{{ input_class }}" />
+          </div>
+          <div></div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Sale starts at</label>
+            <input type="datetime-local" name="sale_starts_at"
+                   value="{{ product.sale_starts_at.strftime('%Y-%m-%dT%H:%M') if product.sale_starts_at else '' }}"
+                   class="{{ input_class }}" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Sale ends at</label>
+            <input type="datetime-local" name="sale_ends_at"
+                   value="{{ product.sale_ends_at.strftime('%Y-%m-%dT%H:%M') if product.sale_ends_at else '' }}"
+                   class="{{ input_class }}" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Shipping -->
+      <div class="p-5 space-y-4">
+        <h2 class="text-sm font-semibold text-gray-700">Shipping</h2>
+        <div class="grid grid-cols-4 gap-4">
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Weight (g)</label>
+            <input type="number" step="1" name="weight_grams" value="{{ product.weight_grams or '' }}" class="{{ input_class }}" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Length (mm)</label>
+            <input type="number" step="1" name="length_mm" value="{{ product.length_mm or '' }}" class="{{ input_class }}" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Width (mm)</label>
+            <input type="number" step="1" name="width_mm" value="{{ product.width_mm or '' }}" class="{{ input_class }}" />
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-medium text-gray-700">Height (mm)</label>
+            <input type="number" step="1" name="height_mm" value="{{ product.height_mm or '' }}" class="{{ input_class }}" />
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 flex justify-end">
         <button type="submit"
                 class="text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2">
           Save changes

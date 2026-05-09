@@ -248,6 +248,7 @@ def detail(product_id):
 @login_required
 def edit(product_id):
     product = _owned_product_or_404(product_id)
+    # Basics
     product.title = request.form["title"].strip()
     product.sku = request.form["sku"].strip()
     product.description = request.form.get("description") or None
@@ -255,9 +256,34 @@ def edit(product_id):
     product.price = _decimal(request.form.get("price"))
     product.compare_at_price = _decimal(request.form.get("compare_at_price"))
     product.currency = request.form.get("currency", product.currency)
+    # Marketing
+    product.vendor = (request.form.get("vendor") or "").strip() or None
+    product.slug = (request.form.get("slug") or "").strip() or None
+    product.short_description = request.form.get("short_description") or None
+    product.featured = bool(request.form.get("featured"))
+    # Sale
+    product.sale_price = _decimal(request.form.get("sale_price"))
+    product.sale_starts_at = _datetime(request.form.get("sale_starts_at"))
+    product.sale_ends_at = _datetime(request.form.get("sale_ends_at"))
+    # Shipping (dimensions stored as mm; weight as g)
+    product.weight_grams = _int(request.form.get("weight_grams"), default=None)
+    product.length_mm = _int(request.form.get("length_mm"), default=None)
+    product.width_mm = _int(request.form.get("width_mm"), default=None)
+    product.height_mm = _int(request.form.get("height_mm"), default=None)
     db.session.commit()
     flash("Saved.")
     return redirect(url_for("catalogue.detail", product_id=product.id))
+
+
+def _datetime(value: str | None):
+    """Parse an HTML <input type='datetime-local'> value into a datetime."""
+    from datetime import datetime as _dt
+    if not value:
+        return None
+    try:
+        return _dt.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 @bp.route("/<int:product_id>/delete", methods=["POST"])
