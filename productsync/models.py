@@ -41,6 +41,10 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(160), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    # Platform-operator role. Orthogonal to account_type — an admin is a User
+    # who can access the /admin/* area; what kind of account they belong to
+    # (store/distributor) is independent. Granted via DB only, never via UI.
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     account = db.relationship("Account", lazy="joined")

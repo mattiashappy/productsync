@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Admin — ProductSync{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <span class="inline-flex items-center px-2.5 py-1 mb-2 text-xs font-medium text-rose-800 bg-rose-50 border border-rose-200 rounded-full">
+    <span class="w-1.5 h-1.5 bg-rose-600 rounded-full mr-1.5"></span>
+    Platform admin
+  </span>
+  <h1 class="text-2xl font-bold text-gray-900">Admin dashboard</h1>
+  <p class="text-sm text-gray-500 mt-1">Platform-wide view across every account.</p>
+</div>
+
+<!-- KPI tiles -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+    <p class="text-xs text-gray-500 uppercase tracking-wide">Accounts</p>
+    <p class="text-3xl font-bold text-gray-900 mt-1">{{ total_accounts }}</p>
+    <p class="text-xs text-gray-500 mt-2">
+      <span class="text-emerald-700 font-medium">{{ accounts_by_type.get('store', 0) }} stores</span>
+      ·
+      <span class="text-amber-700 font-medium">{{ accounts_by_type.get('distributor', 0) }} distributors</span>
+    </p>
+  </div>
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+    <p class="text-xs text-gray-500 uppercase tracking-wide">Users</p>
+    <p class="text-3xl font-bold text-gray-900 mt-1">{{ total_users }}</p>
+    <p class="text-xs text-gray-500 mt-2">
+      {{ total_admins }} admin{{ '' if total_admins == 1 else 's' }}
+    </p>
+  </div>
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+    <p class="text-xs text-gray-500 uppercase tracking-wide">New (7 days)</p>
+    <p class="text-3xl font-bold text-primary-700 mt-1">{{ new_accounts_7d }}</p>
+    <p class="text-xs text-gray-500 mt-2">accounts · {{ new_users_7d }} users</p>
+  </div>
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+    <p class="text-xs text-gray-500 uppercase tracking-wide">Connected stores</p>
+    <p class="text-3xl font-bold text-gray-900 mt-1">{{ total_channels }}</p>
+    <p class="text-xs text-gray-500 mt-2">{{ '{:,}'.format(total_products) }} products · {{ '{:,}'.format(total_orders) }} orders</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Recent accounts -->
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">Latest accounts</h2>
+      <a href="{{ url_for('admin.accounts') }}" class="text-xs font-medium text-primary-600 hover:text-primary-800">All accounts →</a>
+    </div>
+    {% if recent_accounts %}
+    <ul class="divide-y divide-gray-100">
+      {% for a in recent_accounts %}
+      <li class="px-5 py-3">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium text-gray-900 truncate">{{ a.name }}</p>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+            {% if a.account_type == 'distributor' %}bg-amber-100 text-amber-800
+            {% else %}bg-emerald-100 text-emerald-800{% endif %}">{{ a.account_type }}</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-0.5">{{ a.created_at.strftime('%Y-%m-%d %H:%M') }} · {{ a.created_at | naturaltime }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400 px-5 py-6 text-center">No accounts yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Recent users -->
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">Latest users</h2>
+      <a href="{{ url_for('admin.users') }}" class="text-xs font-medium text-primary-600 hover:text-primary-800">All users →</a>
+    </div>
+    {% if recent_users %}
+    <ul class="divide-y divide-gray-100">
+      {% for u in recent_users %}
+      <li class="px-5 py-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-gray-900 truncate">{{ u.name }}</p>
+            <p class="text-xs text-gray-500 truncate">{{ u.email }}</p>
+          </div>
+          {% if u.is_admin %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">admin</span>
+          {% endif %}
+        </div>
+        <p class="text-xs text-gray-400 mt-0.5">{{ u.account.name }} · {{ u.created_at | naturaltime }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400 px-5 py-6 text-center">No users yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Recent sync activity (cross-account) -->
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">Recent sync jobs</h2>
+      <span class="text-xs text-gray-400">all accounts</span>
+    </div>
+    {% if recent_jobs %}
+    <ul class="divide-y divide-gray-100">
+      {% for j in recent_jobs %}
+      <li class="px-5 py-3">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium text-gray-900">
+            <code class="text-xs">{{ j.kind }}</code>
+          </p>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+            {% if j.status == 'succeeded' %}bg-green-100 text-green-800
+            {% elif j.status == 'failed' %}bg-red-100 text-red-800
+            {% else %}bg-gray-100 text-gray-600{% endif %}">{{ j.status }}</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-0.5">
+          {% if j.channel_account %}{{ j.channel_account.display_name }} · {% endif %}
+          {{ j.created_at | naturaltime }}
+        </p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400 px-5 py-6 text-center">No jobs yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

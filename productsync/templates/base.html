@@ -161,6 +161,18 @@
           </div>
           <ul class="py-1 text-gray-500" aria-labelledby="user-dropdown">
             <li><a href="{{ url_for('addons_ui.index') }}" class="block py-2 px-4 text-sm hover:bg-gray-100">Addons</a></li>
+            {% if current_user.is_admin %}
+            <li>
+              <a href="{{ url_for('admin.dashboard') }}"
+                 class="flex items-center justify-between py-2 px-4 text-sm hover:bg-gray-100">
+                <span class="inline-flex items-center gap-2">
+                  <svg class="w-4 h-4 text-rose-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 0 1 2.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2.001A11.954 11.954 0 0 1 10 1.944ZM11 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm0-7a1 1 0 1 0-2 0v3a1 1 0 1 0 2 0V7Z" clip-rule="evenodd"/></svg>
+                  Admin
+                </span>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-100 text-rose-800">platform</span>
+              </a>
+            </li>
+            {% endif %}
           </ul>
           <ul class="py-1 text-gray-500" aria-labelledby="user-dropdown">
             <li><a href="{{ url_for('auth.logout') }}" class="block py-2 px-4 text-sm hover:bg-gray-100">Sign out</a></li>
@@ -185,7 +197,29 @@
     </a>
     {%- endmacro %}
 
-    {% if current_user.account and current_user.account.is_distributor %}
+    {% if ep.startswith('admin.') %}
+      {# Admin nav — only rendered when the URL is /admin/*. Wraps a 'Back to app' link at the top #}
+      <ul class="space-y-2">
+        <li>
+          <a href="{{ dashboard_url_for(current_user) }}"
+             class="flex items-center p-2 rounded-lg text-base font-normal text-gray-500 hover:bg-gray-100">
+            <span class="w-6 h-6 flex items-center justify-center mr-3 text-gray-400">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 14 10" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5H1m0 0 4 4M1 5l4-4"/></svg>
+            </span>
+            <span class="flex-1 whitespace-nowrap">Back to app</span>
+          </a>
+        </li>
+        <li class="pt-2 mt-2 border-t border-gray-100">
+          <p class="px-2 pt-2 pb-1 text-[10px] font-semibold text-rose-700 uppercase tracking-wide">Platform admin</p>
+        </li>
+        <li>{{ side_link('admin.dashboard', url_for('admin.dashboard'), 'Dashboard',
+          '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 10a8 8 0 1 1 16 0 8 8 0 0 1-16 0Zm9-7.93v3.86A4.002 4.002 0 0 1 13.93 9h3.86A8.008 8.008 0 0 0 11 2.07ZM4.07 11A8.008 8.008 0 0 0 9 17.93v-3.86A4.002 4.002 0 0 1 6.07 11H4.07Z"/></svg>') }}</li>
+        <li>{{ side_link('admin.accounts', url_for('admin.accounts'), 'Accounts',
+          '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M3 21V8l9-5 9 5v13M9 21V12h6v9"/></svg>') }}</li>
+        <li>{{ side_link('admin.users', url_for('admin.users'), 'Users',
+          '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5 5 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM7 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg>') }}</li>
+      </ul>
+    {% elif current_user.account and current_user.account.is_distributor %}
       {# Distributor nav — focused on catalogue publishing and the stores subscribed to them #}
       <ul class="space-y-2">
         <li>{{ side_link('distributor.dashboard', url_for('distributor.dashboard'), 'Dashboard',

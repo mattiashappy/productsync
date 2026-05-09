@@ -46,6 +46,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
         return db.session.get(User, int(user_id))
 
     # Blueprints
+    from .admin.routes import bp as admin_bp
     from .auth.routes import bp as auth_bp
     from .catalogue.routes import bp as catalogue_bp
     from .addons_ui.routes import bp as addons_ui_bp
@@ -54,6 +55,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
     from .sync_ui.routes import bp as sync_ui_bp
     from .webhooks.routes import bp as webhooks_bp
 
+    app.register_blueprint(admin_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(catalogue_bp)
     app.register_blueprint(addons_ui_bp)

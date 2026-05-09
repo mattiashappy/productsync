@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Accounts — Admin — ProductSync{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <span class="inline-flex items-center px-2.5 py-1 mb-2 text-xs font-medium text-rose-800 bg-rose-50 border border-rose-200 rounded-full">
+    <span class="w-1.5 h-1.5 bg-rose-600 rounded-full mr-1.5"></span>
+    Platform admin
+  </span>
+  <h1 class="text-2xl font-bold text-gray-900">Accounts</h1>
+  <p class="text-sm text-gray-500 mt-1">Every account on the platform. Read-only view.</p>
+</div>
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+
+  <!-- Filter bar -->
+  <form method="GET" class="flex flex-col sm:flex-row gap-3 p-4 border-b border-gray-200">
+    <div class="relative flex-1 max-w-md">
+      <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
+      </div>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search account name…"
+             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-9 p-2" />
+    </div>
+    <select name="type"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2">
+      <option value="">All types</option>
+      <option value="store" {% if account_type == 'store' %}selected{% endif %}>Stores</option>
+      <option value="distributor" {% if account_type == 'distributor' %}selected{% endif %}>Distributors</option>
+    </select>
+    <button class="text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-2">Filter</button>
+    {% if q or account_type %}
+      <a href="{{ url_for('admin.accounts') }}" class="text-sm text-gray-500 hover:text-gray-900 self-center">Clear</a>
+    {% endif %}
+  </form>
+
+  {% if rows %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left text-gray-700">
+      <thead class="text-xs text-gray-500 uppercase bg-gray-50 tracking-wide">
+        <tr>
+          <th class="px-5 py-3">Account</th>
+          <th class="px-5 py-3">Type</th>
+          <th class="px-5 py-3 text-right">Users</th>
+          <th class="px-5 py-3 text-right">Connected stores</th>
+          <th class="px-5 py-3 text-right">Products</th>
+          <th class="px-5 py-3">Created</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for r in rows %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-5 py-3">
+            <p class="font-medium text-gray-900">{{ r.account.name }}</p>
+            <p class="text-xs text-gray-400 font-mono">id={{ r.account.id }}</p>
+          </td>
+          <td class="px-5 py-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+              {% if r.account.account_type == 'distributor' %}bg-amber-100 text-amber-800
+              {% else %}bg-emerald-100 text-emerald-800{% endif %}">{{ r.account.account_type }}</span>
+          </td>
+          <td class="px-5 py-3 text-right">{{ r.user_count }}</td>
+          <td class="px-5 py-3 text-right">{{ r.channel_count }}</td>
+          <td class="px-5 py-3 text-right">{{ '{:,}'.format(r.product_count) }}</td>
+          <td class="px-5 py-3 text-gray-500">
+            {{ r.account.created_at.strftime('%Y-%m-%d') }}
+            <span class="text-xs text-gray-400">· {{ r.account.created_at | naturaltime }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-5 py-12 text-sm text-gray-400 text-center">No accounts match.</p>
+  {% endif %}
+</div>
+{% endblock %}

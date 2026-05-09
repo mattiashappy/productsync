@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Users — Admin — ProductSync{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <span class="inline-flex items-center px-2.5 py-1 mb-2 text-xs font-medium text-rose-800 bg-rose-50 border border-rose-200 rounded-full">
+    <span class="w-1.5 h-1.5 bg-rose-600 rounded-full mr-1.5"></span>
+    Platform admin
+  </span>
+  <h1 class="text-2xl font-bold text-gray-900">Users</h1>
+  <p class="text-sm text-gray-500 mt-1">Every user across every account. Read-only view.</p>
+</div>
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+
+  <!-- Filter bar -->
+  <form method="GET" class="flex flex-col sm:flex-row gap-3 p-4 border-b border-gray-200">
+    <div class="relative flex-1 max-w-md">
+      <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
+      </div>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search name, email, or account…"
+             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-9 p-2" />
+    </div>
+    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+      <input type="checkbox" name="admins" value="1" {% if only_admins %}checked{% endif %}
+             class="w-4 h-4 border-gray-300 rounded text-primary-600 focus:ring-primary-500" />
+      Admins only
+    </label>
+    <button class="text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-2">Filter</button>
+    {% if q or only_admins %}
+      <a href="{{ url_for('admin.users') }}" class="text-sm text-gray-500 hover:text-gray-900 self-center">Clear</a>
+    {% endif %}
+  </form>
+
+  {% if users %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left text-gray-700">
+      <thead class="text-xs text-gray-500 uppercase bg-gray-50 tracking-wide">
+        <tr>
+          <th class="px-5 py-3">User</th>
+          <th class="px-5 py-3">Account</th>
+          <th class="px-5 py-3">Account type</th>
+          <th class="px-5 py-3">Role</th>
+          <th class="px-5 py-3">Joined</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for u in users %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                {{ u.name[0]|upper }}
+              </span>
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900 truncate">{{ u.name }}</p>
+                <p class="text-xs text-gray-500 truncate">{{ u.email }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-5 py-3 text-gray-700">{{ u.account.name }}</td>
+          <td class="px-5 py-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+              {% if u.account.account_type == 'distributor' %}bg-amber-100 text-amber-800
+              {% else %}bg-emerald-100 text-emerald-800{% endif %}">{{ u.account.account_type }}</span>
+          </td>
+          <td class="px-5 py-3">
+            {% if u.is_admin %}
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">admin</span>
+            {% else %}
+              <span class="text-xs text-gray-400">member</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3 text-gray-500">
+            {{ u.created_at.strftime('%Y-%m-%d') }}
+            <span class="text-xs text-gray-400">· {{ u.created_at | naturaltime }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="px-5 py-12 text-sm text-gray-400 text-center">No users match.</p>
+  {% endif %}
+</div>
+
+<p class="mt-4 text-xs text-gray-400">
+  Granting/revoking admin requires a database update — keep it intentional.
+  Use <code class="bg-gray-100 px-1 rounded">heroku run flask --app wsgi shell</code>
+  and update <code class="bg-gray-100 px-1 rounded">User.query.filter_by(email='…').first().is_admin = True</code>.
+</p>
+{% endblock %}
